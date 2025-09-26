@@ -200,8 +200,8 @@ def save_comparison(comparison_df, output_file):
 def main():
     """Función principal"""
     
-    # Configuración de rutas
-    base_path = "data/4.simulation_results/PurchasingExample"
+    # Configuración de rutas (desde comparison_stats)
+    base_path = "../data/4.simulation_results/PurchasingExample"
     rules_name = "directly__Send_Request_for_Quotation_to_Supplier__Analyze_Request_for_Quotation"
     
     asis_stats = f"{base_path}/{rules_name}_ASIS/PurchasingExample_prosimos_stats.csv"

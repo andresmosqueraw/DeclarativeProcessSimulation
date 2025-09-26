@@ -323,8 +323,8 @@ def create_summary_table(df, output_dir):
 def main():
     """Función principal"""
     
-    # Configuración de rutas
-    base_path = "data/4.simulation_results/PurchasingExample"
+    # Configuración de rutas (desde comparison_stats)
+    base_path = "../data/4.simulation_results/PurchasingExample"
     rules_name = "directly__Send_Request_for_Quotation_to_Supplier__Analyze_Request_for_Quotation"
     comparison_file = f"{base_path}/comparison_stats/{rules_name}_comparison.csv"
     output_dir = f"{base_path}/comparison_stats/visualizations"
