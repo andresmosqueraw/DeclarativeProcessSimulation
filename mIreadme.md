@@ -56,3 +56,8 @@ rm -rf data/3.bps_asis/PurchasingExample/
 rm -rf data/3.bps_tobe/PurchasingExample/
 rm -rf data/4.simulation_results/PurchasingExample/
 /home/andrew/miniconda3/envs/deep_generator/bin/python dg_prediction.py
+
+
+compare stats:
+/home/andrew/miniconda3/envs/deep_generator/bin/python compare_stats.py
+/home/andrew/miniconda3/envs/deep_generator/bin/python visualize_stats.py

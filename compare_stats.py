@@ -206,7 +206,8 @@ def main():
     
     asis_stats = f"{base_path}/{rules_name}_ASIS/PurchasingExample_prosimos_stats.csv"
     tobe_stats = f"{base_path}/{rules_name}_TOBE/PurchasingExample_prosimos_stats.csv"
-    output_file = f"{base_path}/{rules_name}_comparison.csv"
+    os.makedirs(f"{base_path}/comparison_stats", exist_ok=True)
+    output_file = f"{base_path}/comparison_stats/{rules_name}_comparison.csv"
     
     # Verificar que los archivos existen
     if not os.path.exists(asis_stats):
