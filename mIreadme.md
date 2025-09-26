@@ -47,9 +47,12 @@ cp docs/example/configuration.yaml data/2.hallucination_logs/PurchasingExample/c
 
 para probar todo otra vez
 
+rm -rf data/0.logs/PurchasingExample/embedded_matix/
+rm -rf data/1.predicton_models/PurchasingExample/
+
+/home/andrew/miniconda3/envs/deep_generator/bin/python dg_training.py
+
 rm -rf data/3.bps_asis/PurchasingExample/
 rm -rf data/3.bps_tobe/PurchasingExample/
 rm -rf data/4.simulation_results/PurchasingExample/
-
-/home/andrew/miniconda3/envs/deep_generator/bin/python dg_training.py
 /home/andrew/miniconda3/envs/deep_generator/bin/python dg_prediction.py

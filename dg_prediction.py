@@ -135,14 +135,17 @@ def extract_rules(path):
     rules = f"{rules['rule']}__"+"__".join(item.replace(' ', '_') for item in rules['path'])
     return rules
 
-def simulate_bimp(input_path="", output_path="", NAME="", bimp_path="./GenerativeLSTM/external_tools/bimp/qbp-simulator-engine.jar"):
-    
+def simulate_bimp(input_path="", output_path="", NAME="", bimp_path="./GenerativeLSTM/external_tools/bimp/qbp-simulator-engine.jar", resources_json_filename=None):
+
     final_input_path = f"{input_path}/{pa.get_latest_output_folder(input_path)}/best_result"
     bpmn_bimp_path = f"{final_input_path}/{NAME}_bimp_version.bpmn"
 
+    if resources_json_filename is None:
+        resources_json_filename = f"{NAME}.json"
+
     bp.embed_qbp_simulation(
         bpmn_path=f"{final_input_path}/{NAME}.bpmn",
-        resources_json_path=f"{final_input_path}/{NAME}_merged.json",
+        resources_json_path=f"{final_input_path}/{resources_json_filename}",
         bpmn_bimp_path=bpmn_bimp_path)
     pa.run_bimp_docker(
         bimp_path=bimp_path,
@@ -183,10 +186,16 @@ def main(argv):
     
 
     # Simulate the model
-    simulate_model(input_path=f"data/3.bps_tobe/{NAME}", output_path=f"data/4.simulation_results/{NAME}/{rules_name}", bpmn_filename=f"{FILENAME.replace('.csv', '.bpmn')}",
+    simulate_model(input_path=f"data/3.bps_tobe/{NAME}", output_path=f"data/4.simulation_results/{NAME}/{rules_name}_TOBE", bpmn_filename=f"{FILENAME.replace('.csv', '.bpmn')}",
                    resources_filename= merged_filename)
 
-    simulate_bimp(input_path=f"data/3.bps_tobe/{NAME}", output_path=f"data/4.simulation_results/{NAME}/{rules_name}", NAME=NAME)
+    simulate_bimp(input_path=f"data/3.bps_tobe/{NAME}", output_path=f"data/4.simulation_results/{NAME}/{rules_name}_TOBE", NAME=NAME)
+
+    # Additionally, simulate the AS-IS model to obtain its overall stats
+    simulate_model(input_path=f"data/3.bps_asis/{NAME}", output_path=f"data/4.simulation_results/{NAME}/{rules_name}_ASIS", bpmn_filename=f"{FILENAME.replace('.csv', '.bpmn')}",
+                   resources_filename=f"{FILENAME.replace('.csv', '.json')}" )
+
+    simulate_bimp(input_path=f"data/3.bps_asis/{NAME}", output_path=f"data/4.simulation_results/{NAME}/{rules_name}_ASIS", NAME=NAME, resources_json_filename=f"{NAME}.json")
 
 if __name__ == "__main__":
     main(sys.argv[1:])
