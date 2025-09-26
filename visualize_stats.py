@@ -193,6 +193,19 @@ def create_radar_chart(df, output_dir):
     
     print("✅ Gráfico radar guardado: radar_comparison.png")
 
+def encode_image_to_base64(image_path):
+    """Convierte una imagen a base64 para incrustarla en HTML"""
+    import base64
+    
+    try:
+        with open(image_path, 'rb') as img_file:
+            img_data = img_file.read()
+            img_base64 = base64.b64encode(img_data).decode('utf-8')
+            return f"data:image/png;base64,{img_base64}"
+    except Exception as e:
+        print(f"Error encoding image {image_path}: {e}")
+        return None
+
 def create_summary_table(df, output_dir):
     """Crea tabla resumen con formato HTML"""
     
@@ -219,6 +232,11 @@ def create_summary_table(df, output_dir):
             'Interpretación': interpretation
         })
     
+    # Codificar imágenes a base64
+    performance_img = encode_image_to_base64(f'{output_dir}/performance_comparison.png')
+    change_img = encode_image_to_base64(f'{output_dir}/change_analysis.png')
+    radar_img = encode_image_to_base64(f'{output_dir}/radar_comparison.png')
+    
     # Crear HTML
     html_content = f"""
     <!DOCTYPE html>
@@ -229,12 +247,14 @@ def create_summary_table(df, output_dir):
             body {{ font-family: Arial, sans-serif; margin: 40px; }}
             h1 {{ color: #2c3e50; }}
             h2 {{ color: #34495e; }}
+            h3 {{ color: #495057; }}
             table {{ border-collapse: collapse; width: 100%; margin: 20px 0; }}
             th, td {{ border: 1px solid #ddd; padding: 12px; text-align: left; }}
             th {{ background-color: #f2f2f2; font-weight: bold; }}
             .improvement {{ background-color: #d4edda; }}
             .degradation {{ background-color: #f8d7da; }}
             .summary {{ background-color: #e9ecef; padding: 20px; border-radius: 5px; margin: 20px 0; }}
+            img {{ max-width: 100%; height: auto; border: 1px solid #ddd; border-radius: 5px; margin: 10px 0; }}
         </style>
     </head>
     <body>
@@ -269,16 +289,24 @@ def create_summary_table(df, output_dir):
             </tr>
         """
     
-    html_content += """
+    # Agregar sección de visualizaciones
+    html_content += f"""
         </table>
         
         <h2>📊 Visualizaciones</h2>
         <p>Las siguientes gráficas muestran la comparación visual:</p>
-        <ul>
-            <li><strong>performance_comparison.png</strong> - Comparación de métricas principales</li>
-            <li><strong>change_analysis.png</strong> - Análisis de cambios porcentuales</li>
-            <li><strong>radar_comparison.png</strong> - Comparación multidimensional</li>
-        </ul>
+        
+        <h3>📈 Comparación de Rendimiento</h3>
+        <p>Gráfico de barras comparando las métricas principales entre AS-IS y TO-BE:</p>
+        <img src="{performance_img}" alt="Comparación de Rendimiento">
+        
+        <h3>📊 Análisis de Cambios</h3>
+        <p>Gráfico horizontal mostrando los cambios porcentuales (verde = mejora, rojo = empeoramiento):</p>
+        <img src="{change_img}" alt="Análisis de Cambios">
+        
+        <h3>🎯 Comparación Multidimensional</h3>
+        <p>Gráfico radar mostrando el perfil completo de ambos modelos:</p>
+        <img src="{radar_img}" alt="Comparación Multidimensional">
         
         <h2>🎯 Conclusiones</h2>
         <p>Este análisis muestra el impacto de aplicar reglas declarativas específicas en el proceso de negocio.</p>
