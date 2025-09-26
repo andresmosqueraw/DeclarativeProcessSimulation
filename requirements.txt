@@ -53,3 +53,14 @@ tensorflow-io-gcs-filesystem==0.31.0
 termcolor==2.3.0
 webencodings==0.5.1
 Werkzeug==3.0.1
+# Dependencias de ongoing-bps-state
+log-distance-measures==2.1.0
+pix-framework==0.14.2
+ongoing-process-state==2.1.2
+-e ./ongoing_bps_state/Prosimos
+pandas==2.2.3
+numpy==1.26.4
+networkx==3.4.2
+lxml==5.3.1
+scikit-learn==1.6.1
+tqdm==4.67.1

@@ -61,3 +61,8 @@ rm -rf data/4.simulation_results/PurchasingExample/
 compare stats:
 /home/andrew/miniconda3/envs/deep_generator/bin/python compare_stats.py
 /home/andrew/miniconda3/envs/deep_generator/bin/python visualize_stats.py
+
+
+shortterm
+cd DeclarativeProcessSimulation/shorterm
+python run_complete_integration.py
