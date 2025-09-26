@@ -116,6 +116,7 @@ class MergeModels:
         # Docker command
         docker_cmd = [
             "docker", "run", "--rm",
+            "--user", f"{os.getuid()}:{os.getgid()}",
             "-v", f"{local_path}:/app",  # mount the local directory into Docker
             "-w", "/app",                # work inside /app
             "java8-xvfb",                 # the Docker image name

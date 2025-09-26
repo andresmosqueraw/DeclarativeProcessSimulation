@@ -37,7 +37,7 @@ def parse_args(argv, filename=''):
 
 
 def main(argv):
-    FILENAME = 'Production.csv'
+    FILENAME = 'PurchasingExample.csv'
     NAME = FILENAME.split('.')[0]
     args = parse_args(argv,filename=FILENAME)
 
@@ -61,7 +61,7 @@ def main(argv):
         'batch_size': 32,
         'norm_method': ['max', 'lognorm'],
         'imp': 1,
-        'epochs': 200,
+        'epochs': 1,
         'n_size': [5, 10, 15],
         'l_size': [50, 100],
         'lstm_act': ['selu', 'tanh'],

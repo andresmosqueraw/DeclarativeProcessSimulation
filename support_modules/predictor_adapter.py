@@ -28,6 +28,7 @@ def run_simod_docker(input_path="data/1.input_logs", output_path="data/2.bps_asi
     config_inside_container = "/usr/src/Simod/resources/" + config_file_name
     docker_command = [
         "docker", "run", "--rm",
+        "--user", f"{os.getuid()}:{os.getgid()}",
         "-v", f"{input_path}:/usr/src/Simod/resources",
         "-v", f"{output_path}:/usr/src/Simod/outputs",
         # "-w", "/usr/src",
@@ -59,6 +60,7 @@ def run_prosimos_docker(input_path="data/output_tobe", output_path="data/output_
 
     docker_command = [
         "docker", "run", "--rm",
+        "--user", f"{os.getuid()}:{os.getgid()}",
         "-v", f"{input_path}:/usr/src/Simod/resources",
         "-v", f"{output_path}:/usr/src/Simod/outputs",
         # "-w", "/usr/src", 
@@ -98,6 +100,7 @@ def run_bimp_docker(bimp_path, bpmn_path, csv_path):
     # Docker command
     docker_cmd = [
         "docker", "run", "--rm",
+        "--user", f"{os.getuid()}:{os.getgid()}",
         "-v", f"{local_path}:/app",  # mount the local directory into Docker
         "-w", "/app",                # work inside /app
         "java8-xvfb",                 # the Docker image name

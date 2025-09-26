@@ -25,6 +25,7 @@ def sm3_miner_docker(xes_file, output_path=None):
     # Final Docker command
     docker_cmd = [
         "docker", "run", "--rm",
+        "--user", f"{os.getuid()}:{os.getgid()}",
         "-v", f"{local_path}:/app",
         "-w", "/app",
         "java8-xvfb",
