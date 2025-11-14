@@ -10,9 +10,32 @@ import json
 import datetime
 
 # Agregar path de ongoing-bps-state
-ongoing_bps_path = "/home/andrew/Documents/asistencia-graduada-phd-oscar/paper1-short-term/repos-short-term/ongoing-bps-state"
+possible_paths = [
+    "/home/andrew/Documents/asistencia-graduada-phd-oscar/paper1/repos-asis-online-predictivo/whats-coming-next-short-term-simulation-of-business-processes-from-current-state/ongoing-bps-state-short-term",
+    "/home/andrew/Documents/asistencia-graduada-phd-oscar/paper1-short-term/repos-short-term/ongoing-bps-state",
+]
+
+ongoing_bps_path = None
+for path in possible_paths:
+    if os.path.exists(path) and os.path.isdir(path):
+        ongoing_bps_path = path
+        break
+
+if ongoing_bps_path is None:
+    print("❌ No se encontró ongoing-bps-state-short-term")
+    sys.exit(1)
+
 if ongoing_bps_path not in sys.path:
     sys.path.append(ongoing_bps_path)
+
+# Agregar path de Prosimos (necesario para que ongoing-bps-state pueda importarlo)
+prosimos_path = "/home/andrew/Documents/asistencia-graduada-phd-oscar/paper1/repos-asis-online-predictivo/whats-coming-next-short-term-simulation-of-business-processes-from-current-state/libraries-used/Prosimos"
+if os.path.exists(prosimos_path) and prosimos_path not in sys.path:
+    sys.path.insert(0, prosimos_path)
+    # También agregar el directorio prosimos dentro de Prosimos
+    prosimos_module_path = os.path.join(prosimos_path, "prosimos")
+    if os.path.exists(prosimos_module_path) and prosimos_module_path not in sys.path:
+        sys.path.insert(0, prosimos_module_path)
 
 try:
     from src.runner import run_process_state_and_simulation
@@ -30,12 +53,30 @@ def test_ongoing_state():
     
     # Configuración
     log_name = "PurchasingExample"
-    base_path = "../data"
+    # Obtener ruta absoluta desde el directorio del script
+    script_dir = os.path.dirname(os.path.abspath(__file__))
+    base_path = os.path.join(script_dir, "..", "..", "data")
+    base_path = os.path.abspath(base_path)
     
     # Rutas de archivos
-    event_log_path = f"{base_path}/0.logs/{log_name}/{log_name}_ongoing.csv"
-    bpmn_model_path = f"{base_path}/3.bps_tobe/{log_name}/20250926_181023_70FFA5C6_19A5_43EB_9E54_2347C1A341E4/best_result/{log_name}.bpmn"
-    bpmn_params_path = f"{base_path}/3.bps_tobe/{log_name}/20250926_181023_70FFA5C6_19A5_43EB_9E54_2347C1A341E4/best_result/{log_name}_merged.json"
+    event_log_path = os.path.join(base_path, "0.logs", log_name, f"{log_name}_ongoing.csv")
+    # Buscar el directorio más reciente en 3.bps_tobe
+    bpmn_base_dir = os.path.join(base_path, "3.bps_tobe", log_name)
+    if not os.path.exists(bpmn_base_dir):
+        print(f"❌ Directorio no encontrado: {bpmn_base_dir}")
+        return False
+    
+    # Buscar el subdirectorio más reciente
+    subdirs = [d for d in os.listdir(bpmn_base_dir) if os.path.isdir(os.path.join(bpmn_base_dir, d))]
+    if not subdirs:
+        print(f"❌ No se encontraron subdirectorios en: {bpmn_base_dir}")
+        return False
+    
+    latest_subdir = sorted(subdirs)[-1]
+    best_result_dir = os.path.join(bpmn_base_dir, latest_subdir, "best_result")
+    
+    bpmn_model_path = os.path.join(best_result_dir, f"{log_name}.bpmn")
+    bpmn_params_path = os.path.join(best_result_dir, f"{log_name}_merged.json")
     
     # Verificar archivos
     for path in [event_log_path, bpmn_model_path, bpmn_params_path]:
@@ -43,10 +84,10 @@ def test_ongoing_state():
             print(f"❌ Archivo no encontrado: {path}")
             return False
         else:
-            print(f"✅ Archivo encontrado: {path}")
+            print(f"✅ Archivo encontrado: {os.path.basename(path)}")
     
     # Directorio de salida
-    ongoing_output_dir = f"{base_path}/5.ongoing_state/{log_name}"
+    ongoing_output_dir = os.path.join(base_path, "5.ongoing_state", log_name)
     os.makedirs(ongoing_output_dir, exist_ok=True)
     
     try:
