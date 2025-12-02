@@ -50,7 +50,8 @@ This diagram illustrates the detailed architecture of the \texttt{nuevo} pipelin
     
     % Phase labels at top
     \node[phase] (phase1) at (-4, 7) {PHASE 1: BPMN \& JSON EXTRACTION};
-    \node[phase] (phase2) at (4, 7) {PHASE 2: STATE \& SIMULATION};
+    \node[phase] (phase2a) at (2, 7) {PHASE 2A: STATE};
+    \node[phase] (phase2b) at (6, 7) {PHASE 2B: SIMULATION};
     
     % ========== PHASE 1 DETAILS ==========
     
@@ -89,41 +90,53 @@ This diagram illustrates the detailed architecture of the \texttt{nuevo} pipelin
     % Output directory label
     \node[font=\tiny, align=center] at (-4, -3.5) {\texttt{data/generado-simod/}};
     
-    % ========== PHASE 2 DETAILS ==========
+    % ========== PHASE 2A: STATE COMPUTATION ==========
     
-    % run_ongoing_state.py main module
-    \node[script, fill=orange!25] (ongoing) at (4, 5) {
-      \texttt{run\_ongoing\_state.py}
+    % compute_state.py main module
+    \node[script, fill=cyan!25] (compute-state) at (2, 5) {
+      \texttt{compute\_state.py}
     };
     
-    % Internal steps of run_ongoing_state.py
-    \node[procstep] (load) at (2.5, 2.5) {1. Load\\config \& files};
-    \node[procstep] (preprocess) at (6, 2.5) {2. Preprocess\\event log};
-    \node[procstep] (state) at (9.5, 2.5) {3. Compute\\partial state};
+    % Internal steps of compute_state.py
+    \node[procstep] (load) at (0.5, 2.5) {1. Load\\config \& files};
+    \node[procstep] (preprocess) at (2, 2.5) {2. Preprocess\\event log};
+    \node[procstep] (state) at (3.5, 2.5) {3. Compute\\partial state};
     
     % State computation details
-    \node[procstep, fill=cyan!20] (ongoing-act) at (3.5, 1) {Identify\\ongoing\\activities};
-    \node[procstep, fill=cyan!20] (n-gram) at (7, 1) {N-gram\\indexing};
-    \node[procstep, fill=cyan!20] (marking) at (10.5, 1) {Control-flow\\marking};
+    \node[procstep, fill=cyan!20] (ongoing-act) at (1, 1) {Identify\\ongoing\\activities};
+    \node[procstep, fill=cyan!20] (n-gram) at (2, 1) {N-gram\\indexing};
+    \node[procstep, fill=cyan!20] (marking) at (3, 1) {Control-flow\\marking};
     
     % Step 4: Save state JSON
-    \node[procstep] (save-state) at (6, 0) {4. Save state\\to JSON};
+    \node[procstep] (save-state) at (2, 0) {4. Save state\\to JSON};
     
     % State output
-    \node[output] (state-json) at (6, -1) {Process\\State\\\texttt{*.json}};
+    \node[output] (state-json) at (2, -1) {Process\\State\\\texttt{*.json}};
     
-    % Simulation step (conditional)
-    \node[procstep] (simulate) at (6, -2) {5. Short-term\\simulation\\(if enabled)};
+    % Output directory label for state
+    \node[font=\tiny, align=center] at (2, -1.7) {\texttt{data/generado-state/}};
+    
+    % ========== PHASE 2B: SIMULATION ==========
+    
+    % run_simulation.py main module
+    \node[script, fill=orange!25] (run-sim) at (6, 5) {
+      \texttt{run\_simulation.py}
+    };
+    
+    % Internal steps of run_simulation.py
+    \node[procstep] (load-state) at (5, 2.5) {1. Load\\state file};
+    \node[procstep] (simulate) at (6, 2.5) {2. Short-term\\simulation};
+    \node[procstep] (save-sim) at (7, 2.5) {3. Save\\results};
     
     % Prosimos tool
-    \node[tool] (prosimos) at (6, -2.8) {Prosimos};
+    \node[tool] (prosimos) at (6, 1) {Prosimos};
     
     % Simulation outputs
-    \node[output] (sim-log) at (3.5, -3.8) {Simulation\\Log\\\texttt{*.csv}};
-    \node[output] (sim-stats) at (8.5, -3.8) {Simulation\\Stats\\\texttt{*.csv}};
+    \node[output] (sim-log) at (4.5, -0.5) {Simulation\\Log\\\texttt{*.csv}};
+    \node[output] (sim-stats) at (7.5, -0.5) {Simulation\\Stats\\\texttt{*.csv}};
     
-    % Output directory label
-    \node[font=\tiny, align=center] at (6, -4.5) {\texttt{data/generado-ongoing/}};
+    % Output directory label for simulation
+    \node[font=\tiny, align=center] at (6, -1.2) {\texttt{data/generado-short-term-simulation/}};
     
     % ========== ARROWS PHASE 1 ==========
     
@@ -149,16 +162,16 @@ This diagram illustrates the detailed architecture of the \texttt{nuevo} pipelin
     \draw[arrow, green!70] (copy.south) -- (bpmn.north);
     \draw[arrow, green!70] (copy.south) -- (json.north);
     
-    % ========== ARROWS PHASE 2 ==========
+    % ========== ARROWS PHASE 2A: STATE ==========
     
-    % Inputs to run_ongoing_state.py
-    \draw[arrow, blue!70, dashed] (log.north) -- ++(0,0.8) -| (ongoing.west);
-    \draw[arrow, purple!70, dashed] (config.south) -- ++(0,-0.2) -| (ongoing.west);
-    \draw[arrow, purple!80] (bpmn.south) -- ++(0,-0.4) -- ++(6,0) |- (ongoing.west);
-    \draw[arrow, purple!80] (json.east) -- ++(2,0) |- (ongoing.west);
+    % Inputs to compute_state.py
+    \draw[arrow, blue!70, dashed] (log.north) -- ++(0,0.8) -| (compute-state.west);
+    \draw[arrow, purple!70, dashed] (config.south) -- ++(0,-0.2) -| (compute-state.west);
+    \draw[arrow, purple!80] (bpmn.south) -- ++(0,-0.4) -- ++(4,0) |- (compute-state.west);
+    \draw[arrow, purple!80] (json.east) -- ++(0,0) |- (compute-state.west);
     
-    % Internal flow in run_ongoing_state.py
-    \draw[internal] (ongoing.south) -- (load.north);
+    % Internal flow in compute_state.py
+    \draw[internal] (compute-state.south) -- (load.north);
     \draw[internal] (load.east) -- (preprocess.west);
     \draw[internal] (preprocess.east) -- (state.west);
     
@@ -170,8 +183,21 @@ This diagram illustrates the detailed architecture of the \texttt{nuevo} pipelin
     \draw[internal] (state.south) |- (save-state.west);
     \draw[arrow, green!70] (save-state.south) -- (state-json.north);
     
-    % Simulation flow (conditional, from state JSON)
-    \draw[arrow, orange!70, dashed] (state-json.south) -- node[right, font=\tiny] {if simulate=true} (simulate.north);
+    % ========== ARROWS PHASE 2B: SIMULATION ==========
+    
+    % Inputs to run_simulation.py (state JSON from Phase 2A)
+    \draw[arrow, green!70, thick] (state-json.east) -- node[above, font=\tiny] {uses} (load-state.west);
+    \draw[arrow, purple!80] (bpmn.south) -- ++(0,-0.4) -- ++(8,0) |- (run-sim.west);
+    \draw[arrow, purple!80] (json.east) -- ++(4,0) |- (run-sim.west);
+    \draw[arrow, blue!70, dashed] (log.north) -- ++(0,1.2) -| (run-sim.west);
+    \draw[arrow, purple!70, dashed] (config.south) -- ++(0,0.2) -| (run-sim.west);
+    
+    % Internal flow in run_simulation.py
+    \draw[internal] (run-sim.south) -- (load-state.north);
+    \draw[internal] (load-state.east) -- (simulate.west);
+    \draw[internal] (simulate.east) -- (save-sim.west);
+    
+    % Simulation flow
     \draw[arrow, orange!70] (simulate.south) -- (prosimos.north);
     \draw[arrow, green!70] (prosimos.south) -- (sim-log.north);
     \draw[arrow, green!70] (prosimos.south) -- (sim-stats.north);
@@ -214,10 +240,13 @@ This diagram illustrates the detailed architecture of the \texttt{nuevo} pipelin
            \textbf{Phase 1} (left): \texttt{extract\_bpmn\_json.py} compresses the event log, 
            creates Simod configuration, executes Simod via Docker for BPMN discovery and parameter 
            estimation, then copies results to \texttt{data/generado-simod/}. 
-           \textbf{Phase 2} (right): \texttt{run\_ongoing\_state.py} loads configuration and files, 
+           \textbf{Phase 2A} (center): \texttt{compute\_state.py} loads configuration and files, 
            preprocesses the event log, computes partial process state (identifying ongoing activities, 
-           building N-gram indices, computing control-flow markings), and optionally runs short-term 
-           simulation via Prosimos, producing outputs in \texttt{data/generado-ongoing/}.}
+           building N-gram indices, computing control-flow markings), and saves the state to 
+           \texttt{data/generado-state/}. 
+           \textbf{Phase 2B} (right): \texttt{run\_simulation.py} loads the computed state, 
+           executes short-term simulation via Prosimos using the partial state as initial condition, 
+           and produces outputs in \texttt{data/generado-short-term-simulation/}.}
   \label{fig:architecture}
 \end{figure}
 
@@ -242,9 +271,9 @@ The \texttt{extract\_bpmn\_json.py} script performs the following steps:
     \item \textbf{Result Extraction}: Locates the most recent timestamped output directory, finds \texttt{best\_result} subdirectory, and copies \texttt{*.bpmn} and \texttt{*.json} files to \texttt{data/generado-simod/}
 \end{enumerate}
 
-\subsection{Phase 2: State \& Simulation Details}
+\subsection{Phase 2A: State Computation Details}
 
-The \texttt{run\_ongoing\_state.py} script performs the following steps:
+The \texttt{compute\_state.py} script performs the following steps:
 
 \begin{enumerate}
     \item \textbf{Configuration \& File Loading}: 
@@ -268,13 +297,27 @@ The \texttt{run\_ongoing\_state.py} script performs the following steps:
         \item \textbf{Enabled Elements}: Computes enabled activities, gateways, and events based on markings and ongoing activities
         \item \textbf{State Serialization}: Generates a JSON structure containing \texttt{last\_case\_arrival} and per-case states with control-flow state, ongoing activities, and enabled elements
 \end{itemize}
-    \item \textbf{Save State to JSON}: Writes the computed partial state to \texttt{output.json} (later renamed to \texttt{\{log\_name\}\_process\_state.json}) in the output directory
-    \item \textbf{Short-term Simulation} (if \texttt{simulate: true}):
+    \item \textbf{Save State to JSON}: Writes the computed partial state to \texttt{output.json} (later renamed to \texttt{\{log\_name\}\_process\_state.json}) in \texttt{data/generado-state/}
+\end{enumerate}
+
+\subsection{Phase 2B: Simulation Details}
+
+The \texttt{run\_simulation.py} script performs the following steps:
+
+\begin{enumerate}
+    \item \textbf{Load State File}: 
+\begin{itemize}
+        \item Locates the process state JSON file generated by \texttt{compute\_state.py} in \texttt{data/generado-state/}
+        \item Loads the partial state from the JSON file
+        \item Verifies that simulation is enabled (\texttt{simulate: true} in \texttt{config.yaml})
+\end{itemize}
+    \item \textbf{Short-term Simulation}:
 \begin{itemize}
         \item Calculates simulation horizon (from \texttt{horizon\_days} or explicit \texttt{simulation\_horizon})
         \item Executes Prosimos with partial state as initial condition
-        \item Generates simulation log and statistics CSV files
+        \item Generates simulation log and statistics CSV files in \texttt{data/generado-short-term-simulation/}
 \end{itemize}
+    \item \textbf{Save Results}: Writes simulation outputs (log CSV, stats CSV, and warnings if any)
 \end{enumerate}
 
 \subsection{Data Structures}

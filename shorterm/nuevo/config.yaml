@@ -97,6 +97,14 @@ script_config:
   # Si es null, se usa data/generado-simod dentro de la carpeta nuevo/
   output_dir: null
   
+  # Directorio donde se guardará el estado parcial (compute_state.py)
+  # Si es null, se usa data/generado-state dentro de la carpeta nuevo/
+  state_output_dir: null
+  
+  # Directorio donde se guardarán los resultados de simulación (run_simulation.py)
+  # Si es null, se usa data/generado-short-term-simulation dentro de la carpeta nuevo/
+  simulation_output_dir: null
+  
   # Prefijo para directorios temporales (se crean en la carpeta del log)
   temp_dir_prefix: ".simod_temp"
   

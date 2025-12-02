@@ -51,16 +51,16 @@ echo "✅ PASO 1 COMPLETADO"
 echo "=================================================================================="
 echo ""
 
-# Paso 2: Ejecutar run_ongoing_state.py
+# Paso 2: Ejecutar compute_state.py
 echo "=================================================================================="
-echo "📋 PASO 2: Calculando estado parcial y ejecutando simulación"
+echo "📋 PASO 2: Calculando estado parcial del proceso"
 echo "=================================================================================="
 echo ""
 
-if [ -f "$SRC_DIR/run_ongoing_state.py" ]; then
-    python "$SRC_DIR/run_ongoing_state.py" || handle_error "run_ongoing_state.py"
+if [ -f "$SRC_DIR/compute_state.py" ]; then
+    python "$SRC_DIR/compute_state.py" || handle_error "compute_state.py"
 else
-    echo "❌ No se encontró: $SRC_DIR/run_ongoing_state.py"
+    echo "❌ No se encontró: $SRC_DIR/compute_state.py"
     deactivate
     exit 1
 fi
@@ -68,6 +68,26 @@ fi
 echo ""
 echo "=================================================================================="
 echo "✅ PASO 2 COMPLETADO"
+echo "=================================================================================="
+echo ""
+
+# Paso 3: Ejecutar run_simulation.py (si está habilitado)
+echo "=================================================================================="
+echo "📋 PASO 3: Ejecutando simulación de corto plazo (si está habilitada)"
+echo "=================================================================================="
+echo ""
+
+if [ -f "$SRC_DIR/run_simulation.py" ]; then
+    python "$SRC_DIR/run_simulation.py" || handle_error "run_simulation.py"
+else
+    echo "❌ No se encontró: $SRC_DIR/run_simulation.py"
+    deactivate
+    exit 1
+fi
+
+echo ""
+echo "=================================================================================="
+echo "✅ PASO 3 COMPLETADO"
 echo "=================================================================================="
 echo ""
 
@@ -79,4 +99,5 @@ echo "🎉 ¡Pipeline completado exitosamente!"
 echo ""
 echo "📁 Archivos generados:"
 echo "   • BPMN y JSON: data/generado-simod/"
-echo "   • Estado parcial y simulación: data/generado-ongoing/"
+echo "   • Estado parcial: data/generado-state/"
+echo "   • Simulación: data/generado-short-term-simulation/"
