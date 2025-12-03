@@ -65,30 +65,30 @@ This diagram illustrates the detailed architecture of the \texttt{nuevo} pipelin
     };
     
     % Internal steps of extract_bpmn_json.py
-    \node[procstep] (compress) at (-13, 2.5) {1. Compress\\log to .gz};
-    \node[procstep] (create-config) at (-9, 2.5) {2. Create\\Simod config};
-    \node[procstep] (docker) at (-5, 2.5) {3. Run Simod\\via Docker};
+    \node[procstep] (compress) at (-14, 2.5) {1. Compress\\log to .gz};
+    \node[procstep] (create-config) at (-10.5, 2.5) {2. Create\\Simod config};
+    \node[procstep] (docker) at (-7, 2.5) {3. Run Simod\\via Docker};
     
     % Simod tool
-    \node[tool] (simod) at (-5, 1) {Simod\\(Docker)};
+    \node[tool] (simod) at (-9, 1) {Simod\\(Docker)};
     
     % Simod internal processes
-    \node[procstep, fill=orange!20] (discover) at (-8.5, -0.3) {BPMN\\Discovery};
-    \node[procstep, fill=orange!20] (params) at (-4, -0.3) {Parameter\\Estimation};
+    \node[procstep, fill=orange!20] (discover) at (-12.5, -0.3) {BPMN\\Discovery};
+    \node[procstep, fill=orange!20] (params) at (-9, -0.3) {Parameter\\Estimation};
     
     % Temporary outputs from Simod
-    \node[output, draw=gray!60, fill=gray!20] (temp-bpmn) at (-8.5, -1.2) {Temp\\BPMN};
-    \node[output, draw=gray!60, fill=gray!20] (temp-json) at (-4, -1.2) {Temp\\JSON};
+    \node[output, draw=gray!60, fill=gray!20] (temp-bpmn) at (-12.5, -1.2) {Temp\\BPMN};
+    \node[output, draw=gray!60, fill=gray!20] (temp-json) at (-9, -1.2) {Temp\\JSON};
     
     % Step 4: Copy results
-    \node[procstep] (copy) at (-6, -2) {4. Find \& copy\\results};
+    \node[procstep] (copy) at (-10.7, -2) {4. Find \& copy\\results};
     
     % Final outputs from Phase 1
-    \node[output] (bpmn) at (-8, -3) {BPMN\\\texttt{*.bpmn}};
-    \node[output] (json) at (-4, -3) {JSON\\\texttt{*.json}};
+    \node[output] (bpmn) at (-12, -3) {BPMN\\\texttt{*.bpmn}};
+    \node[output] (json) at (-9, -3) {JSON\\\texttt{*.json}};
     
     % Output directory label
-    \node[font=\tiny, align=center] at (-4, -3.5) {\texttt{data/generado-simod/}};
+    \node[font=\tiny, align=center] at (-10, -3.5) {\texttt{data/generado-simod/}};
     
     % ========== PHASE 2A: STATE COMPUTATION ==========
     
@@ -98,23 +98,32 @@ This diagram illustrates the detailed architecture of the \texttt{nuevo} pipelin
     };
     
     % Internal steps of compute_state.py
-    \node[procstep] (load) at (0.5, 2.5) {1. Load\\config \& files};
-    \node[procstep] (preprocess) at (4, 2.5) {2. Preprocess\\event log};
-    \node[procstep] (state) at (8, 2.5) {3. Compute\\partial state};
+    \node[procstep] (load) at (-1, 2.5) {1. Load\\config \& files};
+    \node[procstep] (read-log) at (2, 2.5) {2. Read\\event log};
+    \node[procstep] (calc-cuts) at (5, 2.5) {3. Calculate\\cut points};
     
-    % State computation details
-    \node[procstep, fill=cyan!20] (ongoing-act) at (0.5, 1) {Identify\\ongoing\\activities};
-    \node[procstep, fill=cyan!20] (n-gram) at (4, 1) {N-gram\\indexing};
-    \node[procstep, fill=cyan!20] (marking) at (8, 1) {Control-flow\\marking};
+    % Cut point strategies
+    \node[procstep, fill=cyan!20] (strategy) at (2, 1.5) {Strategy:\\fixed/wip3/\\segment10};
     
-    % Step 4: Save state JSON
-    \node[procstep] (save-state) at (4, 0) {4. Save state\\to JSON};
+    % Iterate over cut points
+    \node[procstep] (iterate) at (2, 0.5) {4. For each\\cut point};
     
-    % State output
-    \node[output] (state-json) at (4, -1) {Process\\State\\\texttt{*.json}};
+    % State computation for each cut
+    \node[procstep] (preprocess) at (-1, -0.5) {Preprocess\\log};
+    \node[procstep, fill=cyan!20] (ongoing-act) at (-1, -1.5) {Identify\\ongoing\\activities};
+    \node[procstep, fill=cyan!20] (n-gram) at (2, -1.5) {N-gram\\indexing};
+    \node[procstep, fill=cyan!20] (marking) at (5, -1.5) {Control-flow\\marking};
+    
+    % Save state JSON
+    \node[procstep] (save-state) at (2, -2.5) {5. Save state\\to JSON};
+    
+    % Multiple state outputs
+    \node[output] (state-json-1) at (-1, -3.5) {State 1\\\texttt{*.json}};
+    \node[output] (state-json-2) at (2, -3.5) {State 2\\\texttt{*.json}};
+    \node[output] (state-json-n) at (5, -3.5) {State N\\\texttt{*.json}};
     
     % Output directory label for state
-    \node[font=\tiny, align=center] at (4, -1.7) {\texttt{data/generado-state/}};
+    \node[font=\tiny, align=center] at (2, -4.2) {\texttt{data/generado-state/}};
     
     % ========== PHASE 2B: SIMULATION ==========
     
@@ -124,19 +133,26 @@ This diagram illustrates the detailed architecture of the \texttt{nuevo} pipelin
     };
     
     % Internal steps of run_simulation.py
-    \node[procstep] (load-state) at (13, 2.5) {1. Load\\state file};
-    \node[procstep] (simulate) at (16.5, 2.5) {2. Short-term\\simulation};
-    \node[procstep] (save-sim) at (20, 2.5) {3. Save\\results};
+    \node[procstep] (find-states) at (9, 2.5) {1. Find all\\state files};
+    \node[procstep] (iterate-sim) at (12, 2.5) {2. For each\\state file};
+    \node[procstep] (simulate) at (15, 2.5) {3. Short-term\\simulation};
     
     % Prosimos tool
-    \node[tool] (prosimos) at (16, 1) {Prosimos};
+    \node[tool] (prosimos) at (11, 1) {Prosimos};
     
-    % Simulation outputs
-    \node[output] (sim-log) at (14.5, -0.5) {Simulation\\Log\\\texttt{*.csv}};
-    \node[output] (sim-stats) at (17.5, -0.5) {Simulation\\Stats\\\texttt{*.csv}};
+    % Organized outputs in folders
+    \node[output] (folder-1) at (8, -0.5) {\texttt{punto-corte-1/}};
+    \node[output] (folder-2) at (11, -0.5) {\texttt{punto-corte-2/}};
+    \node[output] (folder-n) at (14, -0.5) {\texttt{punto-corte-N/}};
+    
+    % Files in each folder
+    \node[output, draw=green!40, fill=green!5, font=\tiny] (sim-log-1) at (8, -1.5) {sim\_log.csv};
+    \node[output, draw=green!40, fill=green!5, font=\tiny] (sim-stats-1) at (8, -2.2) {sim\_stats.csv};
+    \node[output, draw=green!40, fill=green!5, font=\tiny] (sim-log-2) at (11, -1.5) {sim\_log.csv};
+    \node[output, draw=green!40, fill=green!5, font=\tiny] (sim-stats-2) at (11, -2.2) {sim\_stats.csv};
     
     % Output directory label for simulation
-    \node[font=\tiny, align=center] at (16, -1.2) {\texttt{data/generado-short-term-simulation/}};
+    \node[font=\tiny, align=center] at (11, -3) {\texttt{data/generado-short-term-simulation/}};
     
     % ========== ARROWS PHASE 1 ==========
     
@@ -172,41 +188,57 @@ This diagram illustrates the detailed architecture of the \texttt{nuevo} pipelin
     
     % Internal flow in compute_state.py
     \draw[internal] (compute-state.south) -- (load.north);
-    \draw[internal] (load.east) -- (preprocess.west);
-    \draw[internal] (preprocess.east) -- (state.west);
+    \draw[internal] (load.east) -- (read-log.west);
+    \draw[internal] (read-log.east) -- (calc-cuts.west);
+    \draw[internal] (calc-cuts.south) -- (strategy.north);
+    \draw[internal] (strategy.south) -- (iterate.north);
     
-    % State computation details
+    % For each cut point loop
+    \draw[internal] (iterate.south) -- (preprocess.north);
     \draw[internal] (preprocess.south) -- (ongoing-act.north);
     \draw[internal] (ongoing-act.east) -- (n-gram.west);
     \draw[internal] (n-gram.east) -- (marking.west);
     \draw[internal] (marking.south) |- (save-state.east);
-    \draw[internal] (state.east) -- ++(0.5,0) |- (save-state.east);
-    \draw[arrow, green!70] (save-state.south) -- (state-json.north);
+    \draw[internal] (preprocess.south) |- (save-state.west);
+    
+    % Multiple state outputs
+    \draw[arrow, green!70] (save-state.south) -- (state-json-1.north);
+    \draw[arrow, green!70] (save-state.south) -- (state-json-2.north);
+    \draw[arrow, green!70] (save-state.south) -- (state-json-n.north);
     
     % ========== ARROWS PHASE 2B: SIMULATION ==========
     
-    % Inputs to run_simulation.py (state JSON from Phase 2A)
-    \draw[arrow, green!70, thick] (state-json.east) -- ++(5,1.2) -- node[above, font=\tiny] {uses} (load-state.south);
+    % Inputs to run_simulation.py (multiple state JSONs from Phase 2A)
+    \draw[arrow, green!70, thick] (state-json-1.east) -- ++(3,0) |- (find-states.west);
+    \draw[arrow, green!70, thick] (state-json-2.east) -- ++(1,0) |- (find-states.west);
+    \draw[arrow, green!70, thick] (state-json-n.east) -- ++(1,0) |- (find-states.west);
     \draw[arrow, blue!80] (bpmn.south) -- ++(0,-0.6) -- ++(18.8,0) |- (run-sim.south);
     \draw[arrow, purple!80] (json.east) -- ++(14,0) |- (run-sim.south);
     \draw[arrow, blue!70, dashed] (log.north) -- ++(0,1.2) -| (run-sim.west);
     \draw[arrow, purple!70, dashed] (config.south) -- ++(0,-0.7) -| (run-sim.west);
     
     % Internal flow in run_simulation.py
-    \draw[internal] (run-sim.south) -- (load-state.north);
-    \draw[internal] (load-state.east) -- (simulate.west);
-    \draw[internal] (simulate.east) -- (save-sim.west);
+    \draw[internal] (run-sim.south) -- (find-states.north);
+    \draw[internal] (find-states.east) -- (iterate-sim.west);
+    \draw[internal] (iterate-sim.east) -- (simulate.west);
     
     % Simulation flow
     \draw[arrow, orange!70] (simulate.south) -- (prosimos.north);
-    \draw[arrow, green!70] (prosimos.south) -- (sim-log.north);
-    \draw[arrow, green!70] (prosimos.south) -- (sim-stats.north);
+    
+    % Organized outputs
+    \draw[arrow, green!70] (prosimos.south) -- (folder-1.north);
+    \draw[arrow, green!70] (prosimos.south) -- (folder-2.north);
+    \draw[arrow, green!70] (prosimos.south) -- (folder-n.north);
+    \draw[arrow, green!50] (folder-1.south) -- (sim-log-1.north);
+    \draw[arrow, green!50] (folder-1.south) -- (sim-stats-1.north);
+    \draw[arrow, green!50] (folder-2.south) -- (sim-log-2.north);
+    \draw[arrow, green!50] (folder-2.south) -- (sim-stats-2.north);
     
     % ========== CONFIGURATION DETAILS ==========
     
     % Config details box (left side)
-    \node[config, minimum width=3cm, minimum height=2.5cm, 
-          text width=2.8cm, align=left, font=\tiny] at (-14.5, 0) {
+    \node[config, minimum width=3cm, minimum height=3.5cm, 
+          text width=2.8cm, align=left, font=\tiny] at (-17.5, -0.5) {
       \textbf{config.yaml:}\\
       \vspace{0.1cm}
       • log\_config\\
@@ -218,6 +250,9 @@ This diagram illustrates the detailed architecture of the \texttt{nuevo} pipelin
       \phantom{•} - resource\_model\\
       \vspace{0.1cm}
       • ongoing\_config\\
+      \phantom{•} - cut\_strategy\\
+      \phantom{•} \phantom{•} (fixed/wip3/\\
+      \phantom{•} \phantom{•} segment10)\\
       \phantom{•} - start\_time\\
       \phantom{•} - simulate\\
       \phantom{•} - horizon\_days
@@ -241,12 +276,14 @@ This diagram illustrates the detailed architecture of the \texttt{nuevo} pipelin
            creates Simod configuration, executes Simod via Docker for BPMN discovery and parameter 
            estimation, then copies results to \texttt{data/generado-simod/}. 
            \textbf{Phase 2A} (center): \texttt{compute\_state.py} loads configuration and files, 
-           preprocesses the event log, computes partial process state (identifying ongoing activities, 
-           building N-gram indices, computing control-flow markings), and saves the state to 
-           \texttt{data/generado-state/}. 
-           \textbf{Phase 2B} (right): \texttt{run\_simulation.py} loads the computed state, 
-           executes short-term simulation via Prosimos using the partial state as initial condition, 
-           and produces outputs in \texttt{data/generado-short-term-simulation/}.}
+           reads the event log, calculates cut-off points using strategies (fixed, wip3, or segment10), 
+           then for each cut point: preprocesses the log, computes partial process state (identifying 
+           ongoing activities, building N-gram indices, computing control-flow markings), and saves 
+           multiple state files to \texttt{data/generado-state/}. 
+           \textbf{Phase 2B} (right): \texttt{run\_simulation.py} finds all state files, iterates over 
+           each one, executes short-term simulation via Prosimos using each partial state as initial 
+           condition, and organizes outputs in folders \texttt{punto-corte-1/}, \texttt{punto-corte-2/}, 
+           etc. within \texttt{data/generado-short-term-simulation/}.}
   \label{fig:architecture}
 \end{figure}
 
