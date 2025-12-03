@@ -9,6 +9,9 @@ import os
 import sys
 import json
 import yaml
+import pandas as pd
+import numpy as np
+from datetime import datetime
 
 # Verificar si estamos en un entorno virtual
 if not hasattr(sys, 'real_prefix') and not (hasattr(sys, 'base_prefix') and sys.base_prefix != sys.prefix):
@@ -58,6 +61,93 @@ def load_config(config_path=None):
 def get_log_name_from_path(log_path):
     """Extrae el nombre del log desde la ruta"""
     return os.path.splitext(os.path.basename(log_path))[0]
+
+def compute_cut_points(
+    log_df: pd.DataFrame,
+    horizon_days: int,
+    *,
+    strategy: str = "fixed",
+    fixed_cut: str | None = None,
+    rng: np.random.Generator | None = None,
+) -> list[pd.Timestamp]:
+    """
+    Return a list of cut-off timestamps according to *strategy*.
+    
+    Strategies:
+    ----------
+    fixed
+        Exactly one timestamp, taken from *fixed_cut*.
+        If fixed_cut is None, uses the last event timestamp.
+    wip3
+        Three timestamps where the Work-in-Process equals 10 %, 50 %, and
+        90 % of the maximum observed WiP.
+    segment10
+        Ten timestamps: drop the first and last *horizon* and divide the
+        remaining interval into ten equal segments; pick one random moment
+        from each segment.
+    """
+    if strategy == "fixed":
+        if fixed_cut is None:
+            # Usar último evento del log
+            return [log_df["end_time"].max()]
+        return [pd.to_datetime(fixed_cut, utc=True)]
+    
+    rng = rng or np.random.default_rng()
+    
+    first_ts = log_df["StartTime"].min()
+    last_ts  = log_df["EndTime"].max()
+    
+    safe_start = first_ts + pd.Timedelta(days=horizon_days)
+    safe_end   = last_ts  - pd.Timedelta(days=horizon_days)
+    if safe_start >= safe_end:
+        raise ValueError("the event log is shorter than twice the horizon")
+    
+    # helper: active cases at a given time
+    # Asegurar que las columnas estén presentes
+    if "CaseId" not in log_df.columns or "StartTime" not in log_df.columns or "EndTime" not in log_df.columns:
+        raise ValueError("El log debe tener columnas CaseId, StartTime, EndTime después del mapeo")
+    
+    case_bounds = log_df.groupby("CaseId").agg(
+        start=("StartTime", "min"),
+        end=("EndTime",   "max"),
+    )
+    def active_cases_at(ts: pd.Timestamp) -> int:
+        mask = (case_bounds["start"] <= ts) & (case_bounds["end"] > ts)
+        return int(mask.sum())
+    
+    if strategy == "wip3":
+        # evaluate WiP only at case arrival moments
+        arrivals = case_bounds["start"].sort_values()
+        wip_series = pd.Series(
+            {ts: active_cases_at(ts) for ts in arrivals}
+        )
+        max_wip = wip_series.max()
+        targets = [int(round(max_wip * q)) for q in (0.10, 0.50, 0.90)]
+        
+        cuts: list[pd.Timestamp] = []
+        for tgt in targets:
+            exact = wip_series[wip_series == tgt]
+            if not exact.empty:
+                cuts.append(exact.index[0])
+                continue
+            greater = wip_series[wip_series > tgt]
+            if not greater.empty:
+                cuts.append(greater.index[0])
+                continue
+            cuts.append(wip_series.index[0]) 
+        return cuts
+    
+    if strategy == "segment10":
+        span = safe_end - safe_start
+        segment_length = span / 10
+        cuts: list[pd.Timestamp] = []
+        for i in range(10):
+            seg_start = safe_start + i * segment_length
+            jitter = rng.uniform(0, segment_length.total_seconds())
+            cuts.append(seg_start + pd.Timedelta(seconds=float(jitter)))
+        return cuts
+    
+    raise ValueError(f"unknown cut strategy: {strategy}")
 
 def compute_state(config=None):
     """
@@ -142,14 +232,13 @@ def compute_state(config=None):
             print(f"✅ {file_type}: {path}")
     
     # Obtener parámetros de configuración
-    start_time = ongoing_config.get("start_time")  # None = usar último evento
     column_mapping = ongoing_config.get("column_mapping")
     
     # Si column_mapping es null en ongoing_config, usar el de log_config
     if column_mapping is None:
         column_mapping = log_config.get("column_mapping")
     
-    # Convertir column_mapping a JSON string si es un dict
+    # Convertir column_mapping a formato para pandas (csv_name -> standard_name)
     if column_mapping and isinstance(column_mapping, dict):
         csv_to_standard = {
             column_mapping.get("case", "caseid"): "CaseId",
@@ -158,49 +247,106 @@ def compute_state(config=None):
             column_mapping.get("start_time", "start_timestamp"): "StartTime",
             column_mapping.get("end_time", "end_timestamp"): "EndTime"
         }
-        column_mapping = json.dumps(csv_to_standard)
+        column_mapping_json = json.dumps(csv_to_standard)
     elif column_mapping is None:
-        column_mapping = None
+        csv_to_standard = {}
+        column_mapping_json = None
+    else:
+        csv_to_standard = {}
+        column_mapping_json = column_mapping
     
-    # Cambiar al directorio de salida para que output.json se guarde ahí
+    # Leer el log para calcular puntos de corte
+    print("\n📊 Leyendo log de eventos para calcular puntos de corte...")
+    log_df = pd.read_csv(log_path)
+    
+    # Aplicar mapeo de columnas
+    if csv_to_standard:
+        log_df = log_df.rename(columns=csv_to_standard)
+    
+    # Convertir timestamps
+    log_df['StartTime'] = pd.to_datetime(log_df['StartTime'], utc=True)
+    log_df['EndTime'] = pd.to_datetime(log_df['EndTime'], utc=True)
+    
+    # Obtener estrategia de puntos de corte
+    cut_strategy = ongoing_config.get("cut_strategy", "fixed")
+    fixed_cut = ongoing_config.get("start_time")  # Para estrategia "fixed"
+    horizon_days = ongoing_config.get("horizon_days", 7)
+    
+    print(f"\n📅 Estrategia de puntos de corte: {cut_strategy}")
+    
+    # Calcular puntos de corte
+    try:
+        cut_points = compute_cut_points(
+            log_df=log_df,
+            horizon_days=horizon_days,
+            strategy=cut_strategy,
+            fixed_cut=fixed_cut,
+            rng=None
+        )
+        print(f"✅ Calculados {len(cut_points)} puntos de corte")
+        for i, cut in enumerate(cut_points, 1):
+            print(f"   {i}. {cut.isoformat()}")
+    except Exception as e:
+        print(f"❌ Error calculando puntos de corte: {e}")
+        import traceback
+        traceback.print_exc()
+        return None
+    
+    # Cambiar al directorio de salida
     original_cwd = os.getcwd()
     os.chdir(output_dir)
     
+    generated_files = []
+    
     try:
-        print("\n📊 Calculando estado parcial del proceso...")
+        # Procesar cada punto de corte
+        for i, cut_point in enumerate(cut_points, 1):
+            print(f"\n{'='*80}")
+            print(f"📅 Procesando punto de corte {i}/{len(cut_points)}: {cut_point.isoformat()}")
+            print(f"{'='*80}")
+            
+            # Convertir pd.Timestamp a string ISO para run_process_state_and_simulation
+            start_time_str = cut_point.isoformat()
+            
+            # Calcular estado (sin simulación)
+            result = run_process_state_and_simulation(
+                event_log=log_path,
+                bpmn_model=bpmn_path,
+                bpmn_parameters=json_path,
+                start_time=start_time_str,
+                column_mapping=column_mapping_json,
+                simulate=False,  # Solo calcular estado
+                total_cases=ongoing_config.get("total_cases", 20)
+            )
+            
+            # Leer output.json que se creó en el directorio de salida
+            output_json_path = os.path.join(output_dir, "output.json")
+            
+            if os.path.exists(output_json_path):
+                # Generar nombre de archivo con sufijo del punto de corte
+                suffix = cut_point.strftime("%Y%m%d_%H%M%S")
+                state_file = os.path.join(output_dir, f"{log_name}_process_state_{suffix}.json")
+                
+                # Copiar y renombrar
+                import shutil
+                shutil.copy2(output_json_path, state_file)
+                os.remove(output_json_path)  # Eliminar output.json temporal
+                
+                print(f"✅ Estado calculado y guardado en: {state_file}")
+                generated_files.append(state_file)
+            else:
+                print(f"⚠️  No se encontró output.json en: {output_json_path}")
+                if result is None:
+                    print(f"❌ Error: result es None y no se encontró output.json")
         
-        # Calcular estado (sin simulación)
-        result = run_process_state_and_simulation(
-            event_log=log_path,
-            bpmn_model=bpmn_path,
-            bpmn_parameters=json_path,
-            start_time=start_time,
-            column_mapping=column_mapping,
-            simulate=False,  # Solo calcular estado
-            total_cases=ongoing_config.get("total_cases", 20)
-        )
+        print(f"\n{'='*80}")
+        print(f"✅ Proceso completado: {len(generated_files)}/{len(cut_points)} estados generados")
+        print(f"{'='*80}")
+        print(f"\n📁 Estados parciales guardados en: {output_dir}")
+        for f in generated_files:
+            print(f"   • {os.path.basename(f)}")
         
-        # Leer output.json que se creó en el directorio de salida
-        output_json_path = os.path.join(output_dir, "output.json")
-        
-        if os.path.exists(output_json_path):
-            with open(output_json_path, 'r') as f:
-                result = json.load(f)
-            print(f"✅ Estado calculado y guardado en: {output_json_path}")
-        else:
-            print(f"⚠️  No se encontró output.json en: {output_json_path}")
-            if result is None:
-                print(f"❌ Error: result es None y no se encontró output.json")
-                return None
-        
-        # Renombrar output.json a un nombre más descriptivo
-        state_file = os.path.join(output_dir, f"{log_name}_process_state.json")
-        if os.path.exists(output_json_path):
-            os.rename(output_json_path, state_file)
-            print(f"✅ Estado renombrado a: {state_file}")
-        
-        print(f"\n📁 Estado parcial guardado en: {state_file}")
-        return state_file
+        return generated_files if len(generated_files) > 0 else None
         
     except Exception as e:
         print(f"❌ Error: {e}")
@@ -213,9 +359,12 @@ def compute_state(config=None):
 
 def main():
     """Función principal para ejecutar desde línea de comandos"""
-    state_file = compute_state()
-    if state_file:
-        print("\n🎉 ¡Estado parcial calculado exitosamente!")
+    result = compute_state()
+    if result:
+        if isinstance(result, list):
+            print(f"\n🎉 ¡{len(result)} estados parciales calculados exitosamente!")
+        else:
+            print("\n🎉 ¡Estado parcial calculado exitosamente!")
         sys.exit(0)
     else:
         print("\n❌ El cálculo del estado falló")

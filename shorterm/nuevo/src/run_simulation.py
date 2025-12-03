@@ -78,8 +78,21 @@ def get_log_name_from_path(log_path):
     """Extrae el nombre del log desde la ruta"""
     return os.path.splitext(os.path.basename(log_path))[0]
 
-def find_state_file(base_dir, log_name, script_config=None):
-    """Busca el archivo de estado parcial generado"""
+def find_state_files(base_dir, log_name, script_config=None):
+    """
+    Busca todos los archivos de estado parcial generados.
+    Siempre devuelve todos los archivos encontrados (como en ongoing-bps-state-short-term).
+    
+    Args:
+        base_dir: Directorio base
+        log_name: Nombre del log
+        script_config: Configuración del script
+    
+    Returns:
+        list: Lista de rutas a archivos de estado encontrados (puede estar vacía)
+    """
+    import glob
+    
     # Buscar en el directorio de estado parcial
     if script_config:
         state_output_dir = script_config.get("state_output_dir")
@@ -90,28 +103,108 @@ def find_state_file(base_dir, log_name, script_config=None):
     else:
         state_output_dir = os.path.join(base_dir, "data", "generado-state")
     
-    state_file = os.path.join(state_output_dir, f"{log_name}_process_state.json")
+    # Buscar archivos con patrón {log_name}_process_state*.json
+    # Incluye tanto el sin timestamp como los con timestamp
+    pattern = os.path.join(state_output_dir, f"{log_name}_process_state*.json")
+    state_files = sorted(glob.glob(pattern))
     
-    if os.path.exists(state_file):
-        return state_file
+    if not state_files:
+        # Intentar con output.json como fallback
+        output_json = os.path.join(state_output_dir, "output.json")
+        if os.path.exists(output_json):
+            return [output_json]
+        return []
     
-    # Intentar con output.json como fallback
-    output_json = os.path.join(state_output_dir, "output.json")
-    if os.path.exists(output_json):
-        return output_json
+    return state_files
+
+def run_single_simulation(state_file_path, log_path, bpmn_path, json_path, log_name, 
+                          output_dir, ongoing_config, column_mapping, cut_index=None):
+    """
+    Ejecuta una simulación de corto plazo para un estado parcial específico.
     
-    return None
+    Args:
+        cut_index: Índice del punto de corte (1, 2, 3, ...) para organizar en carpetas
+    
+    Returns:
+        dict: Resultado de la simulación con success, sim_time, stats_csv, log_csv, etc.
+    """
+    import datetime
+    
+    # Calcular horizonte de simulación
+    simulation_horizon = ongoing_config.get("simulation_horizon")
+    if not simulation_horizon:
+        horizon_days = ongoing_config.get("horizon_days", 7)
+        now = datetime.datetime.now(datetime.timezone.utc)
+        horizon = now + datetime.timedelta(days=horizon_days)
+        simulation_horizon = horizon.isoformat()
+    
+    # Crear carpeta para este punto de corte si se especifica
+    if cut_index is not None:
+        cut_folder = os.path.join(output_dir, f"punto-corte-{cut_index}")
+        os.makedirs(cut_folder, exist_ok=True)
+        cut_output_dir = cut_folder
+    else:
+        cut_output_dir = output_dir
+    
+    # Rutas de salida para simulación (sin sufijo, ya que están en carpetas separadas)
+    sim_stats_csv = os.path.join(cut_output_dir, f"{log_name}_simulation_stats.csv")
+    sim_log_csv = os.path.join(cut_output_dir, f"{log_name}_simulation_log.csv")
+    
+    original_cwd = os.getcwd()
+    os.chdir(cut_output_dir)
+    
+    try:
+        # Cargar el estado parcial desde el archivo
+        with open(state_file_path, 'r') as f:
+            partial_state = json.load(f)
+        
+        # Convertir start_time y simulation_horizon a datetime si son strings
+        start_dt = None
+        start_time = ongoing_config.get("start_time")
+        if start_time:
+            start_dt = parse_datetime(start_time)
+        
+        horizon_dt = parse_datetime(simulation_horizon)
+        
+        # Ejecutar simulación usando el estado parcial directamente
+        sim_time = run_short_term_simulation(
+            start_date=start_dt,
+            total_cases=ongoing_config.get("total_cases", 20),
+            bpmn_model=bpmn_path,
+            json_sim_params=json_path,
+            out_stats_csv_path=sim_stats_csv,
+            out_log_csv_path=sim_log_csv,
+            process_state=partial_state,
+            simulation_horizon=horizon_dt
+        )
+        
+        return {
+            "success": True,
+            "sim_time": sim_time,
+            "stats_csv": sim_stats_csv,
+            "log_csv": sim_log_csv,
+            "state_file": state_file_path
+        }
+        
+    except Exception as e:
+        print(f"❌ Error en simulación: {e}")
+        import traceback
+        traceback.print_exc()
+        return {"success": False, "error": str(e), "state_file": state_file_path}
+    finally:
+        os.chdir(original_cwd)
 
 def run_simulation(config=None, state_file_path=None):
     """
     Ejecuta simulación de corto plazo usando el estado parcial.
+    Si hay múltiples estados (wip3, segment10), ejecuta simulación para cada uno.
     
     Args:
         config: Diccionario de configuración (si es None, se carga desde config.yaml)
-        state_file_path: Ruta al archivo de estado parcial (si es None, se busca automáticamente)
+        state_file_path: Ruta al archivo de estado parcial o lista de rutas (si es None, se busca automáticamente)
     
     Returns:
-        bool: True si la simulación fue exitosa, False en caso contrario
+        bool: True si todas las simulaciones fueron exitosas, False en caso contrario
     """
     print("=" * 80)
     print("🎯 SIMULACIÓN DE CORTO PLAZO")
@@ -164,20 +257,39 @@ def run_simulation(config=None, state_file_path=None):
     # Obtener nombre del log
     log_name = get_log_name_from_path(log_path)
     
-    # Buscar archivo de estado parcial
+    # Buscar todos los archivos de estado parcial (siempre todos, como en ongoing-bps-state-short-term)
     if state_file_path is None:
-        state_file_path = find_state_file(base_dir, log_name, script_config)
+        state_files = find_state_files(base_dir, log_name, script_config)
+    else:
+        # Si se proporciona explícitamente, convertir a lista
+        if isinstance(state_file_path, str):
+            state_files = [state_file_path]
+        elif isinstance(state_file_path, list):
+            state_files = state_file_path
+        else:
+            state_files = []
     
-    if not state_file_path or not os.path.exists(state_file_path):
-        print(f"❌ Error: No se encontró el archivo de estado parcial")
+    if not state_files:
+        print(f"❌ Error: No se encontraron archivos de estado parcial")
         state_dir = script_config.get("state_output_dir") if script_config else None
         if not state_dir:
             state_dir = os.path.join(base_dir, "data", "generado-state")
-        print(f"   Buscado en: {os.path.join(state_dir, f'{log_name}_process_state.json')}")
+        print(f"   Buscado en: {os.path.join(state_dir, f'{log_name}_process_state*.json')}")
         print(f"   Ejecuta primero: python src/compute_state.py")
         return False
     
-    print(f"✅ Archivo de estado encontrado: {state_file_path}")
+    # Verificar que todos los archivos existan
+    for sf in state_files:
+        if not os.path.exists(sf):
+            print(f"❌ Error: Archivo de estado no encontrado: {sf}")
+            return False
+    
+    if len(state_files) > 1:
+        print(f"✅ Encontrados {len(state_files)} archivos de estado (simulando cada uno)")
+        for i, sf in enumerate(state_files, 1):
+            print(f"   {i}. {os.path.basename(sf)}")
+    else:
+        print(f"✅ Archivo de estado encontrado: {os.path.basename(state_files[0])}")
     
     # Rutas de BPMN y JSON
     simod_output_dir = os.path.join(base_dir, "data", "generado-simod")
@@ -191,12 +303,11 @@ def run_simulation(config=None, state_file_path=None):
         bpmn_path = os.path.join(base_dir, f"{log_name}.bpmn")
         json_path = os.path.join(base_dir, f"{log_name}.json")
     
-    # Verificar archivos necesarios
+    # Verificar archivos necesarios (BPMN y JSON)
     files_to_check = {
         "Event Log": log_path,
         "BPMN Model": bpmn_path,
-        "JSON Parameters": json_path,
-        "Process State": state_file_path
+        "JSON Parameters": json_path
     }
     
     print("\n📋 Verificando archivos necesarios...")
@@ -208,7 +319,6 @@ def run_simulation(config=None, state_file_path=None):
             print(f"✅ {file_type}: {path}")
     
     # Obtener parámetros de configuración
-    start_time = ongoing_config.get("start_time")  # None = usar último evento
     column_mapping = ongoing_config.get("column_mapping")
     
     # Si column_mapping es null en ongoing_config, usar el de log_config
@@ -228,10 +338,9 @@ def run_simulation(config=None, state_file_path=None):
     elif column_mapping is None:
         column_mapping = None
     
-    # Calcular horizonte de simulación
+    # Calcular horizonte de simulación (se usa en run_single_simulation)
     simulation_horizon = ongoing_config.get("simulation_horizon")
     if not simulation_horizon:
-        # Calcular horizonte automáticamente (días desde ahora)
         horizon_days = ongoing_config.get("horizon_days", 7)
         now = datetime.datetime.now(datetime.timezone.utc)
         horizon = now + datetime.timedelta(days=horizon_days)
@@ -239,56 +348,49 @@ def run_simulation(config=None, state_file_path=None):
     
     print(f"\n📅 Horizonte de simulación: {simulation_horizon}")
     
-    # Rutas de salida para simulación
-    sim_stats_csv = os.path.join(output_dir, f"{log_name}_simulation_stats.csv")
-    sim_log_csv = os.path.join(output_dir, f"{log_name}_simulation_log.csv")
-    
-    # Cambiar al directorio de salida
-    original_cwd = os.getcwd()
-    os.chdir(output_dir)
-    
-    try:
-        print("\n🎯 Ejecutando simulación de corto plazo...")
+    # Ejecutar simulación para cada estado
+    results = []
+    for i, state_file in enumerate(state_files, 1):
+        print(f"\n{'='*80}")
+        print(f"🎯 Simulación {i}/{len(state_files)}: {os.path.basename(state_file)}")
+        print(f"{'='*80}")
         
-        # Cargar el estado parcial desde el archivo
-        with open(state_file_path, 'r') as f:
-            partial_state = json.load(f)
-        
-        # Convertir start_time y simulation_horizon a datetime si son strings
-        start_dt = None
-        if start_time:
-            start_dt = parse_datetime(start_time)
-        
-        horizon_dt = parse_datetime(simulation_horizon)
-        
-        # Ejecutar simulación usando el estado parcial directamente
-        sim_time = run_short_term_simulation(
-            start_date=start_dt,
-            total_cases=ongoing_config.get("total_cases", 20),
-            bpmn_model=bpmn_path,
-            json_sim_params=json_path,
-            out_stats_csv_path=sim_stats_csv,
-            out_log_csv_path=sim_log_csv,
-            process_state=partial_state,
-            simulation_horizon=horizon_dt
+        result = run_single_simulation(
+            state_file_path=state_file,
+            log_path=log_path,
+            bpmn_path=bpmn_path,
+            json_path=json_path,
+            log_name=log_name,
+            output_dir=output_dir,
+            ongoing_config=ongoing_config,
+            column_mapping=column_mapping,
+            cut_index=i  # Pasar el índice para crear carpeta punto-corte-{i}
         )
         
-        print(f"✅ Simulación completada en {sim_time:.2f} segundos")
-        print(f"📁 Resultados guardados en: {output_dir}")
-        print(f"   • Estado: {os.path.basename(state_file_path)}")
-        print(f"   • Estadísticas: {os.path.basename(sim_stats_csv)}")
-        print(f"   • Log de simulación: {os.path.basename(sim_log_csv)}")
-        
-        return True
-        
-    except Exception as e:
-        print(f"❌ Error: {e}")
-        import traceback
-        traceback.print_exc()
-        return False
-    finally:
-        # Restaurar directorio original
-        os.chdir(original_cwd)
+        if result and result.get("success"):
+            print(f"✅ Simulación {i} completada en {result['sim_time']:.2f} segundos")
+            print(f"   • Carpeta: punto-corte-{i}/")
+            print(f"   • Estadísticas: {os.path.basename(result['stats_csv'])}")
+            print(f"   • Log de simulación: {os.path.basename(result['log_csv'])}")
+            results.append(result)
+        else:
+            error_msg = result.get("error", "Error desconocido") if result else "Error desconocido"
+            print(f"❌ Simulación {i} falló: {error_msg}")
+            results.append(result)
+    
+    # Resumen final
+    successful = sum(1 for r in results if r and r.get("success"))
+    print(f"\n{'='*80}")
+    print(f"✅ Proceso completado: {successful}/{len(state_files)} simulaciones exitosas")
+    print(f"{'='*80}")
+    print(f"\n📁 Resultados guardados en: {output_dir}")
+    for i, r in enumerate(results, 1):
+        if r and r.get("success"):
+            print(f"   📂 punto-corte-{i}/")
+            print(f"      • {os.path.basename(r['stats_csv'])}")
+            print(f"      • {os.path.basename(r['log_csv'])}")
+    
+    return successful == len(state_files)
 
 def main():
     """Función principal para ejecutar desde línea de comandos"""

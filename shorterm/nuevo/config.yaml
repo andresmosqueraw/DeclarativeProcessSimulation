@@ -67,10 +67,18 @@ simod_config:
     num_iterations: 1
 
 # Configuración de ongoing-bps-state-short-term
-# Los archivos generados se guardan en data/generado-ongoing/ (o script_config.output_dir)
+# Los archivos generados se guardan en data/generado-state/ (o script_config.state_output_dir)
 ongoing_config:
+  # Estrategia para calcular puntos de corte (cut-off points)
+  # Opciones:
+  #   - "fixed": 1 punto de corte fijo (usa start_time o último evento si es null)
+  #   - "wip3": 3 puntos de corte basados en percentiles de Work-in-Process (10%, 50%, 90%)
+  #   - "segment10": 10 puntos de corte dividiendo el intervalo temporal en segmentos iguales
+  cut_strategy: "wip3"  # "fixed" | "wip3" | "segment10"
+  
   # Fecha/hora de corte (cut-off) en formato ISO
-  # Si es null, usa el último evento del log como cut-off
+  # Solo se usa si cut_strategy es "fixed"
+  # Si es null y cut_strategy="fixed", usa el último evento del log como cut-off
   start_time: null  # Ejemplo: "2024-01-15T00:00:00Z"
   
   # Mapeo de columnas (se usa el mismo de log_config si no se especifica)
