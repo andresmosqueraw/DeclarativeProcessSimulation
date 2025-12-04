@@ -1,46 +1,46 @@
 \documentclass[a4paper]{article}
 
 \usepackage{tikz}
-\usetikzlibrary{positioning, arrows.meta, shapes, calc}
+\usetikzlibrary{positioning, arrows.meta, shapes, calc, fit}
 \usepackage{float}
 \usepackage{geometry}
-\geometry{margin=1.5cm, landscape}
+\geometry{margin=1cm, landscape}
 
 \begin{document}
 
-\title{System Overview: Nuevo Pipeline Architecture}
+\title{System Overview: Nuevo Pipeline Architecture (with What-If)}
 \author{}
 \date{}
 \maketitle
 
 \section{System Overview}
 
-This diagram illustrates the detailed architecture of the \texttt{nuevo} pipeline, showing internal processing steps and data flows for both main components.
+This diagram illustrates the complete architecture of the \texttt{nuevo} pipeline, including the AS-IS baseline simulation and the Declarative What-If analysis using partial state.
 
 \begin{figure}[H]
   \centering
   \begin{tikzpicture}[
-    scale=0.75,
+    scale=0.68,
     transform shape,
     node distance=0.8cm and 1.5cm,
     script/.style={rectangle, rounded corners, draw=black, thick, 
-                   minimum width=3.5cm, minimum height=1.8cm, 
-                   text width=3.3cm, align=center, font=\small\bfseries},
+                   minimum width=3.2cm, minimum height=1.6cm, 
+                   text width=3cm, align=center, font=\small\bfseries},
     procstep/.style={rectangle, rounded corners, draw=black, fill=gray!10,
-                 minimum width=2.8cm, minimum height=0.7cm,
-                 text width=2.6cm, align=center, font=\tiny},
+                 minimum width=2.5cm, minimum height=0.6cm,
+                 text width=2.3cm, align=center, font=\tiny},
     input/.style={rectangle, draw=blue!60, fill=blue!15, 
-                  minimum width=2cm, minimum height=0.5cm, 
-                  text width=1.8cm, align=center, font=\tiny},
+                  minimum width=1.8cm, minimum height=0.5cm, 
+                  text width=1.6cm, align=center, font=\tiny},
     output/.style={rectangle, draw=green!60, fill=green!15, 
-                   minimum width=2cm, minimum height=0.5cm, 
-                   text width=1.8cm, align=center, font=\tiny},
+                   minimum width=1.8cm, minimum height=0.5cm, 
+                   text width=1.6cm, align=center, font=\tiny},
     config/.style={rectangle, draw=purple!60, fill=purple!15, 
-                   minimum width=2cm, minimum height=0.5cm, 
-                   text width=1.8cm, align=center, font=\tiny},
+                   minimum width=1.8cm, minimum height=0.5cm, 
+                   text width=1.6cm, align=center, font=\tiny},
     tool/.style={rectangle, draw=orange!60, fill=orange!15,
-                 minimum width=2.2cm, minimum height=0.6cm,
-                 text width=2cm, align=center, font=\tiny},
+                 minimum width=2cm, minimum height=0.6cm,
+                 text width=1.8cm, align=center, font=\tiny},
     arrow/.style={->, >=stealth, semithick},
     phase/.style={rectangle, draw=gray!40, fill=gray!8, 
                   minimum width=3cm, minimum height=0.5cm, 
@@ -49,242 +49,120 @@ This diagram illustrates the detailed architecture of the \texttt{nuevo} pipelin
   ]
     
     % Phase labels at top
-    \node[phase] (phase1) at (-8, 8) {PHASE 1: BPMN \& JSON EXTRACTION};
-    \node[phase] (phase2a) at (2, 8) {PHASE 2A: STATE};
-    \node[phase] (phase2b) at (11, 8) {PHASE 2B: SIMULATION};
+    \node[phase] (phase1) at (-13, 9) {PHASE 1: BPMN/JSON EXTRACTION};
+    \node[phase] (phase2a) at (-5, 9) {PHASE 2A: STATE};
+    \node[phase] (phase2b) at (3, 9) {PHASE 2B: SIMULATION (AS-IS)};
+    \node[phase] (phase2c) at (12, 9) {PHASE 2C: WHAT-IF (TO-BE)};
     
-    % ========== PHASE 1 DETAILS ==========
+    % ========== PHASE 1: AS-IS MODEL ==========
     
-    % Inputs to Phase 1
-    \node[input] (log) at (-13, 5.5) {Event Log\\\texttt{*.csv}};
-    \node[config] (config) at (-13, 4.5) {Config\\\texttt{config.yaml}};
+    \node[input] (log) at (-17, 6.5) {Log\\\texttt{*.csv}};
     
-    % extract_bpmn_json.py main module
-    \node[script, fill=blue!25] (extract) at (-8, 5) {
+    \node[script, fill=blue!25] (extract) at (-13, 6) {
       \texttt{extract\_bpmn\_json.py}
     };
     
-    % Internal steps of extract_bpmn_json.py
-    \node[procstep] (compress) at (-14, 2.5) {1. Compress\\log to .gz};
-    \node[procstep] (create-config) at (-10.5, 2.5) {2. Create\\Simod config};
-    \node[procstep] (docker) at (-7, 2.5) {3. Run Simod\\via Docker};
+    \node[tool] (simod1) at (-13, 3.5) {Simod (AS-IS)};
     
-    % Simod tool
-    \node[tool] (simod) at (-9, 1) {Simod\\(Docker)};
+    \node[output] (bpmn-asis) at (-14.5, 1) {AS-IS\\\texttt{*.bpmn}};
+    \node[output] (json-asis) at (-11.5, 1) {AS-IS\\\texttt{*.json}};
+    \node[font=\tiny] (simod-dir) at (-13, 0.5) {\texttt{data/generado-simod/}};
+
+    % Caja contenedora (Folder)
+    \node[draw=gray!80, rounded corners, inner sep=0.2cm, fit=(bpmn-asis) (json-asis) (simod-dir)] (simod-box) {};
     
-    % Simod internal processes
-    \node[procstep, fill=orange!20] (discover) at (-12.5, -0.3) {BPMN\\Discovery};
-    \node[procstep, fill=orange!20] (params) at (-9, -0.3) {Parameter\\Estimation};
+    \draw[arrow, blue!70] (log.east) -- (extract.west);
+    \draw[internal] (extract.south) -- (simod1.north);
+    \draw[arrow, gray!70] (simod1.south) -- (bpmn-asis.north);
+    \draw[arrow, gray!70] (simod1.south) -- (json-asis.north);
     
-    % Temporary outputs from Simod
-    \node[output, draw=gray!60, fill=gray!20] (temp-bpmn) at (-12.5, -1.2) {Temp\\BPMN};
-    \node[output, draw=gray!60, fill=gray!20] (temp-json) at (-9, -1.2) {Temp\\JSON};
+    % ========== PHASE 2A: STATE ==========
     
-    % Step 4: Copy results
-    \node[procstep] (copy) at (-10.7, -2) {4. Find \& copy\\results};
-    
-    % Final outputs from Phase 1
-    \node[output] (bpmn) at (-12, -3) {BPMN\\\texttt{*.bpmn}};
-    \node[output] (json) at (-9, -3) {JSON\\\texttt{*.json}};
-    
-    % Output directory label
-    \node[font=\tiny, align=center] at (-10, -3.5) {\texttt{data/generado-simod/}};
-    
-    % ========== PHASE 2A: STATE COMPUTATION ==========
-    
-    % compute_state.py main module
-    \node[script, fill=cyan!25] (compute-state) at (2, 5) {
+    \node[script, fill=cyan!25] (compute) at (-5, 6) {
       \texttt{compute\_state.py}
     };
     
-    % Internal steps of compute_state.py
-    \node[procstep] (load) at (-1, 2.5) {1. Load\\config \& files};
-    \node[procstep] (read-log) at (2, 2.5) {2. Read\\event log};
-    \node[procstep] (calc-cuts) at (5, 2.5) {3. Calculate\\cut points};
+    \node[procstep] (cut-strategy) at (-5, 4) {Strategy:\\fixed/wip3/seg10};
+    \node[procstep] (calc-state) at (-5, 2.5) {Calc State\\(N-Gram)};
     
-    % Cut point strategies
-    \node[procstep, fill=cyan!20] (strategy) at (2, 1.5) {Strategy:\\fixed/wip3/\\segment10};
+    \node[output] (states) at (-5, 1) {States\\\texttt{*\_state\_*.json}};
+    \node[font=\tiny] at (-5, 0.5) {\texttt{data/generado-state/}};
     
-    % Iterate over cut points
-    \node[procstep] (iterate) at (2, 0.5) {4. For each\\cut point};
+    \draw[arrow, blue!70, dashed] (log.north) -- ++(0,0.5) -| (compute.north);
+    %\draw[arrow, blue!80] (bpmn-asis.east) -- ++(0.5,0) |- (-10,2) |- (compute.west);
+    %\draw[arrow, purple!80] (json-asis.east) -- ++(0.2,0) |- (compute.west);
+    % Conexión desde la derecha (.east) de la caja hacia compute
+    \draw[arrow] (simod-box.east) -- ++(0.5,0) |- (compute.west);
     
-    % State computation for each cut
-    \node[procstep] (preprocess) at (-1, -0.5) {Preprocess\\log};
-    \node[procstep, fill=cyan!20] (ongoing-act) at (-1, -1.5) {Identify\\ongoing\\activities};
-    \node[procstep, fill=cyan!20] (n-gram) at (2, -1.5) {N-gram\\indexing};
-    \node[procstep, fill=cyan!20] (marking) at (5, -1.5) {Control-flow\\marking};
+    \draw[internal] (compute.south) -- (cut-strategy.north);
+    \draw[internal] (cut-strategy.south) -- (calc-state.north);
+    \draw[arrow, green!70] (calc-state.south) -- (states.north);
     
-    % Save state JSON
-    \node[procstep] (save-state) at (2, -2.5) {5. Save state\\to JSON};
+    % ========== PHASE 2B: SIMULATION (AS-IS) ==========
     
-    % Multiple state outputs
-    \node[output] (state-json-1) at (-1, -3.5) {State 1\\\texttt{*.json}};
-    \node[output] (state-json-2) at (2, -3.5) {State 2\\\texttt{*.json}};
-    \node[output] (state-json-n) at (5, -3.5) {State N\\\texttt{*.json}};
-    
-    % Output directory label for state
-    \node[font=\tiny, align=center] at (2, -4.2) {\texttt{data/generado-state/}};
-    
-    % ========== PHASE 2B: SIMULATION ==========
-    
-    % run_simulation.py main module
-    \node[script, fill=orange!25] (run-sim) at (11, 5) {
+    \node[script, fill=orange!25] (sim-asis) at (3, 6) {
       \texttt{run\_simulation.py}
     };
     
-    % Internal steps of run_simulation.py
-    \node[procstep] (find-states) at (9, 2.5) {1. Find all\\state files};
-    \node[procstep] (iterate-sim) at (12, 2.5) {2. For each\\state file};
-    \node[procstep] (simulate) at (15, 2.5) {3. Short-term\\simulation};
+    \node[tool] (prosimos-asis) at (3, 3.5) {Prosimos\\(Short-Term)};
     
-    % Prosimos tool
-    \node[tool] (prosimos) at (11, 1) {Prosimos};
+    \node[output] (out-asis) at (3, 1) {Results\\\texttt{punto-corte-X/}};
+    \node[font=\tiny] at (3, 0.5) {\texttt{data/generado-short-term/}};
     
-    % Organized outputs in folders
-    \node[output] (folder-1) at (8, -0.5) {\texttt{punto-corte-1/}};
-    \node[output] (folder-2) at (11, -0.5) {\texttt{punto-corte-2/}};
-    \node[output] (folder-n) at (14, -0.5) {\texttt{punto-corte-N/}};
+    % Inputs for Phase 2B
+    \draw[arrow, green!70, thick] (states.east) -- ++(1.5,0) |- (3, 7.5) -- (sim-asis.north);
+    %\draw[arrow, blue!80] (bpmn-asis.south) -- ++(0,-0.5) -| (sim-asis.south); % Long arrow around
+    %\draw[arrow, purple!80] (json-asis.south) -- ++(0,-0.3) -| (sim-asis.south);
+    % Conexión desde la derecha (.east) de la caja hacia compute
+    \draw[arrow] (simod-box.east) -| (-9,0) -- ++(10,0) |- (sim-asis.west);
     
-    % Files in each folder
-    \node[output, draw=green!40, fill=green!5, font=\tiny] (sim-log-1) at (8, -1.5) {sim\_log.csv};
-    \node[output, draw=green!40, fill=green!5, font=\tiny] (sim-stats-1) at (8, -2.2) {sim\_stats.csv};
-    \node[output, draw=green!40, fill=green!5, font=\tiny] (sim-log-2) at (11, -1.5) {sim\_log.csv};
-    \node[output, draw=green!40, fill=green!5, font=\tiny] (sim-stats-2) at (11, -2.2) {sim\_stats.csv};
+    \draw[internal] (sim-asis.south) -- (prosimos-asis.north);
+    \draw[arrow, green!70] (prosimos-asis.south) -- (out-asis.north);
     
-    % Output directory label for simulation
-    \node[font=\tiny, align=center] at (11, -3) {\texttt{data/generado-short-term-simulation/}};
+    % ========== PHASE 2C: WHAT-IF (TO-BE) ==========
     
-    % ========== ARROWS PHASE 1 ==========
-    
-    % Inputs to extract_bpmn_json.py
-    \draw[arrow, blue!70] (log.east) -- (extract.west);
-    \draw[arrow, purple!70] (config.east) -- (extract.west);
-    
-    % Internal flow in extract_bpmn_json.py
-    \draw[internal] (extract.south) -- (compress.north);
-    \draw[internal] (compress.east) -- (create-config.west);
-    \draw[internal] (create-config.east) -- (docker.west);
-    \draw[arrow, orange!70] (docker.south) -- (simod.north);
-    
-    % Simod internal
-    \draw[internal] (simod.south) -- (discover.north);
-    \draw[internal] (simod.south) -- (params.north);
-    \draw[arrow, gray!70] (discover.south) -- (temp-bpmn.north);
-    \draw[arrow, gray!70] (params.south) -- (temp-json.north);
-    
-    % Copy step
-    \draw[arrow, gray!70] (temp-bpmn.south) |- (copy.west);
-    \draw[arrow, gray!70] (temp-json.south) |- (copy.east);
-    \draw[arrow, green!70] (copy.south) -- (bpmn.north);
-    \draw[arrow, green!70] (copy.south) -- (json.north);
-    
-    % ========== ARROWS PHASE 2A: STATE ==========
-    
-    % Inputs to compute_state.py
-    \draw[arrow, blue!70, dashed] (log.north) -- ++(0,0.8) -| (compute-state.west);
-    \draw[arrow, purple!70, dashed] (config.south) -- ++(0,-0.2) -| (compute-state.west);
-    \draw[arrow, blue!80] (bpmn.south) -- ++(0,-0.4) -- ++(6.5,0) |- (compute-state.west);
-    \draw[arrow, purple!80] (json.east) -- ++(1,0) |- (compute-state.west);
-    
-    % Internal flow in compute_state.py
-    \draw[internal] (compute-state.south) -- (load.north);
-    \draw[internal] (load.east) -- (read-log.west);
-    \draw[internal] (read-log.east) -- (calc-cuts.west);
-    \draw[internal] (calc-cuts.south) -- (strategy.north);
-    \draw[internal] (strategy.south) -- (iterate.north);
-    
-    % For each cut point loop
-    \draw[internal] (iterate.south) -- (preprocess.north);
-    \draw[internal] (preprocess.south) -- (ongoing-act.north);
-    \draw[internal] (ongoing-act.east) -- (n-gram.west);
-    \draw[internal] (n-gram.east) -- (marking.west);
-    \draw[internal] (marking.south) |- (save-state.east);
-    \draw[internal] (preprocess.south) |- (save-state.west);
-    
-    % Multiple state outputs
-    \draw[arrow, green!70] (save-state.south) -- (state-json-1.north);
-    \draw[arrow, green!70] (save-state.south) -- (state-json-2.north);
-    \draw[arrow, green!70] (save-state.south) -- (state-json-n.north);
-    
-    % ========== ARROWS PHASE 2B: SIMULATION ==========
-    
-    % Inputs to run_simulation.py (multiple state JSONs from Phase 2A)
-    \draw[arrow, green!70, thick] (state-json-1.east) -- ++(3,0) |- (find-states.west);
-    \draw[arrow, green!70, thick] (state-json-2.east) -- ++(1,0) |- (find-states.west);
-    \draw[arrow, green!70, thick] (state-json-n.east) -- ++(1,0) |- (find-states.west);
-    \draw[arrow, blue!80] (bpmn.south) -- ++(0,-0.6) -- ++(18.8,0) |- (run-sim.south);
-    \draw[arrow, purple!80] (json.east) -- ++(14,0) |- (run-sim.south);
-    \draw[arrow, blue!70, dashed] (log.north) -- ++(0,1.2) -| (run-sim.west);
-    \draw[arrow, purple!70, dashed] (config.south) -- ++(0,-0.7) -| (run-sim.west);
-    
-    % Internal flow in run_simulation.py
-    \draw[internal] (run-sim.south) -- (find-states.north);
-    \draw[internal] (find-states.east) -- (iterate-sim.west);
-    \draw[internal] (iterate-sim.east) -- (simulate.west);
-    
-    % Simulation flow
-    \draw[arrow, orange!70] (simulate.south) -- (prosimos.north);
-    
-    % Organized outputs
-    \draw[arrow, green!70] (prosimos.south) -- (folder-1.north);
-    \draw[arrow, green!70] (prosimos.south) -- (folder-2.north);
-    \draw[arrow, green!70] (prosimos.south) -- (folder-n.north);
-    \draw[arrow, green!50] (folder-1.south) -- (sim-log-1.north);
-    \draw[arrow, green!50] (folder-1.south) -- (sim-stats-1.north);
-    \draw[arrow, green!50] (folder-2.south) -- (sim-log-2.north);
-    \draw[arrow, green!50] (folder-2.south) -- (sim-stats-2.north);
-    
-    % ========== CONFIGURATION DETAILS ==========
-    
-    % Config details box (left side)
-    \node[config, minimum width=3cm, minimum height=3.5cm, 
-          text width=2.8cm, align=left, font=\tiny] at (-17.5, -0.5) {
-      \textbf{config.yaml:}\\
-      \vspace{0.1cm}
-      • log\_config\\
-      \phantom{•} - log\_path\\
-      \phantom{•} - column\_mapping\\
-      \vspace{0.1cm}
-      • simod\_config\\
-      \phantom{•} - control\_flow\\
-      \phantom{•} - resource\_model\\
-      \vspace{0.1cm}
-      • ongoing\_config\\
-      \phantom{•} - cut\_strategy\\
-      \phantom{•} \phantom{•} (fixed/wip3/\\
-      \phantom{•} \phantom{•} segment10)\\
-      \phantom{•} - start\_time\\
-      \phantom{•} - simulate\\
-      \phantom{•} - horizon\_days
+    \node[script, fill=purple!25] (whatif) at (12, 6) {
+      \texttt{run\_whatif\_\\declarative.py}
     };
     
+    \node[input] (rules) at (17, 6) {Rules\\\texttt{rules.ini}};
+    
+    % Internal Steps What-If
+    \node[procstep, fill=purple!10] (gen-traces) at (9, 4) {1. Deep Learn\\Synt. Traces};
+    \node[procstep, fill=orange!10] (simod-tobe) at (12, 4) {2. Simod\\(TO-BE)};
+    \node[procstep, fill=purple!10] (map-state) at (15, 4) {3. Map State\\AS-IS $\to$ TO-BE};
+    
+    \node[tool] (prosimos-tobe) at (12, 2.5) {Prosimos\\(Short-Term)};
+    
+    \node[output] (out-tobe) at (12, 1) {Results\\\texttt{whatif-X/cut-Y/}};
+    \node[font=\tiny] at (12, 0.5) {\texttt{data/generado-whatif/}};
+    
+    % Inputs for Phase 2C
+    \draw[arrow, purple!70] (rules.west) -- (whatif.east);
+    \draw[arrow, green!70, thick] (states.east) -- ++(1.5,0) |- (10, 7.5) -| (whatif.north); % State input
+    \draw[arrow, blue!80] (bpmn-asis.south) -- ++(0,-1) -| (17, 4) -- (map-state.east); % AS-IS for mapping
+    
+    % Internal Flow What-If
+    \draw[internal] (whatif.south) -- (gen-traces.north);
+    \draw[internal] (whatif.south) -- (simod-tobe.north);
+    \draw[internal] (whatif.south) -- (map-state.north);
+    
+    \draw[internal] (gen-traces.south) |- (prosimos-tobe.west); % Traces -> Model -> Sim
+    \draw[internal] (simod-tobe.south) -- (prosimos-tobe.north); % TO-BE Model
+    \draw[internal] (map-state.south) |- (prosimos-tobe.east); % Mapped State
+    
+    \draw[arrow, green!70] (prosimos-tobe.south) -- (out-tobe.north);
+    
     % ========== LEGEND ==========
-    \node[anchor=north west, font=\tiny] at (-7.5, -4.5) {
+    \node[anchor=north west, font=\tiny] at (-17, 0) {
       \begin{tabular}{@{}l@{}}
-        \textcolor{blue!70}{$\rightarrow$} Input data\\
-        \textcolor{green!70}{$\rightarrow$} Output data\\
-        \textcolor{purple!80}{$\rightarrow$} Main flow\\
-        \textcolor{orange!70}{$\rightarrow$} Tool execution\\
-        \textcolor{gray!60}{$\rightarrow$} Internal processing\\
-        \textcolor{blue!70}{$\dashrightarrow$} Reused/Config
+        \textcolor{blue!70}{$\rightarrow$} Input Data\\
+        \textcolor{green!70}{$\rightarrow$} State/Results\\
+        \textcolor{orange!70}{$\rightarrow$} Tool Exec
       \end{tabular}
     };
     
   \end{tikzpicture}
-  \caption{Detailed architecture of the \texttt{nuevo} pipeline. 
-           \textbf{Phase 1} (left): \texttt{extract\_bpmn\_json.py} compresses the event log, 
-           creates Simod configuration, executes Simod via Docker for BPMN discovery and parameter 
-           estimation, then copies results to \texttt{data/generado-simod/}. 
-           \textbf{Phase 2A} (center): \texttt{compute\_state.py} loads configuration and files, 
-           reads the event log, calculates cut-off points using strategies (fixed, wip3, or segment10), 
-           then for each cut point: preprocesses the log, computes partial process state (identifying 
-           ongoing activities, building N-gram indices, computing control-flow markings), and saves 
-           multiple state files to \texttt{data/generado-state/}. 
-           \textbf{Phase 2B} (right): \texttt{run\_simulation.py} finds all state files, iterates over 
-           each one, executes short-term simulation via Prosimos using each partial state as initial 
-           condition, and organizes outputs in folders \texttt{punto-corte-1/}, \texttt{punto-corte-2/}, 
-           etc. within \texttt{data/generado-short-term-simulation/}.}
+  \caption{Updated Architecture. \textbf{Phase 1}: AS-IS Model Discovery. \textbf{Phase 2A}: Partial State Computation (supports multiple cut-off strategies). \textbf{Phase 2B}: Baseline Short-Term Simulation using AS-IS model and partial state. \textbf{Phase 2C}: Declarative What-If Analysis. This phase (1) generates synthetic traces complying with declarative rules, (2) discovers a TO-BE BPMN model, (3) \textbf{maps the AS-IS partial state to the TO-BE model} (resolving ID mismatches), and (4) executes short-term simulation from the mapped state for ongoing cases.}
   \label{fig:architecture}
 \end{figure}
-
-\end{document}
