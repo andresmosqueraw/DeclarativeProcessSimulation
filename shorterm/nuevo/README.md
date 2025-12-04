@@ -46,6 +46,17 @@ pip install -r requirements.txt
 - `pyyaml` para manejo de configuración
 - Todas las dependencias necesarias (pandas, numpy, networkx, etc.)
 
+### Dependencias adicionales para What-If Declarativo
+
+El script `run_whatif_declarative.py` requiere dependencias adicionales de `DeclarativeProcessSimulation` (tensorflow, keras, pm4py, etc.).
+
+**Para instalar estas dependencias, ver:** [INSTALL_DEPENDENCIES.md](INSTALL_DEPENDENCIES.md)
+
+O ejecuta:
+```bash
+./install_dependencies.sh
+```
+
 ## Script 1: extract_bpmn_json.py
 
 Extrae modelos BPMN y JSON desde un log de eventos usando Simod.
