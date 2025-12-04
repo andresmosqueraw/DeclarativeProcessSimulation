@@ -49,112 +49,176 @@ This diagram illustrates the complete architecture of the \texttt{nuevo} pipelin
   ]
     
     % Phase labels at top
-    \node[phase] (phase1) at (-13, 9) {PHASE 1: BPMN/JSON EXTRACTION};
-    \node[phase] (phase2a) at (-5, 9) {PHASE 2A: STATE};
-    \node[phase] (phase2b) at (3, 9) {PHASE 2B: SIMULATION (AS-IS)};
-    \node[phase] (phase2c) at (12, 9) {PHASE 2C: WHAT-IF (TO-BE)};
+    \node[phase] (phase1) at (-17, 10) {PHASE 1: BPMN/JSON EXTRACTION};
+    \node[phase] (phase2a) at (-9, 10) {PHASE 2A: STATE};
+    \node[phase] (phase2b) at (-2, 10) {PHASE 2B: SIMULATION (AS-IS)};
+    \node[phase] (phase2c) at (10, 10) {PHASE 2C: WHAT-IF (TO-BE)};
     
     % ========== PHASE 1: AS-IS MODEL ==========
     
     \node[input] (log) at (-17, 6.5) {Log\\\texttt{*.csv}};
     
-    \node[script, fill=blue!25] (extract) at (-13, 6) {
+    \node[script, fill=blue!25] (extract) at (-17, 4) {
       \texttt{extract\_bpmn\_json.py}
     };
     
-    \node[tool] (simod1) at (-13, 3.5) {Simod (AS-IS)};
+    \node[tool] (simod1) at (-17, 2) {Simod (AS-IS)};
     
-    \node[output] (bpmn-asis) at (-14.5, 1) {AS-IS\\\texttt{*.bpmn}};
-    \node[output] (json-asis) at (-11.5, 1) {AS-IS\\\texttt{*.json}};
-    \node[font=\tiny] (simod-dir) at (-13, 0.5) {\texttt{data/generado-simod/}};
+    \node[output] (bpmn-asis) at (-18.5, 0) {AS-IS\\\texttt{*.bpmn}};
+    \node[output] (json-asis) at (-15.5, 0) {AS-IS\\\texttt{*.json}};
+    \node[font=\tiny] (simod-dir) at (-17, -0.5) {\texttt{data/generado-simod/}};
 
     % Caja contenedora (Folder)
-    \node[draw=gray!80, rounded corners, inner sep=0.2cm, fit=(bpmn-asis) (json-asis) (simod-dir)] (simod-box) {};
+    \node[draw=gray!80, rounded corners, inner sep=0.4cm, fit=(bpmn-asis) (json-asis) (simod-dir)] (simod-box) {};
+
+    % Caja contenedora (Folder)
+    \node[draw=gray!80, rounded corners, inner sep=0.2cm, fit=(extract) (simod1) (simod-box)] (extract-box) {};
     
-    \draw[arrow, blue!70] (log.east) -- (extract.west);
+    \draw[arrow, blue!70] (log.south) -- (extract.north);
     \draw[internal] (extract.south) -- (simod1.north);
     \draw[arrow, gray!70] (simod1.south) -- (bpmn-asis.north);
     \draw[arrow, gray!70] (simod1.south) -- (json-asis.north);
     
     % ========== PHASE 2A: STATE ==========
     
-    \node[script, fill=cyan!25] (compute) at (-5, 6) {
+    \node[script, fill=cyan!25] (compute) at (-9, 5) {
       \texttt{compute\_state.py}
     };
     
-    \node[procstep] (cut-strategy) at (-5, 4) {Strategy:\\fixed/wip3/seg10};
-    \node[procstep] (calc-state) at (-5, 2.5) {Calc State\\(N-Gram)};
+    \node[procstep] (cut-strategy) at (-9, 3) {Strategy:\\fixed/wip3/seg10};
+    \node[procstep] (calc-state) at (-9, 1.5) {Calc State\\(N-Gram)};
     
-    \node[output] (states) at (-5, 1) {States\\\texttt{*\_state\_*.json}};
-    \node[font=\tiny] at (-5, 0.5) {\texttt{data/generado-state/}};
+    \node[output] (states) at (-9, 0) {States\\\texttt{*\_state\_*.json}};
+    \node[font=\tiny] at (-9, -0.5) {\texttt{data/generado-state/}};
     
-    \draw[arrow, blue!70, dashed] (log.north) -- ++(0,0.5) -| (compute.north);
+    \draw[arrow, blue!70, dashed] (log.north) -- ++(0,0.9) -| (compute.north);
     %\draw[arrow, blue!80] (bpmn-asis.east) -- ++(0.5,0) |- (-10,2) |- (compute.west);
     %\draw[arrow, purple!80] (json-asis.east) -- ++(0.2,0) |- (compute.west);
     % Conexión desde la derecha (.east) de la caja hacia compute
-    \draw[arrow] (simod-box.east) -- ++(0.5,0) |- (compute.west);
+    \draw[arrow] (simod-box.east) -- ++(1.3,0) |- (compute.west);
     
     \draw[internal] (compute.south) -- (cut-strategy.north);
     \draw[internal] (cut-strategy.south) -- (calc-state.north);
     \draw[arrow, green!70] (calc-state.south) -- (states.north);
+
+    % Caja contenedora (Folder)
+    \node[draw=gray!80, rounded corners, inner sep=0.4cm, fit=(compute) (cut-strategy) (calc-state) (states)] (compute-box) {};
     
     % ========== PHASE 2B: SIMULATION (AS-IS) ==========
     
-    \node[script, fill=orange!25] (sim-asis) at (3, 6) {
+    \node[script, fill=orange!25] (sim-asis) at (-2, 5) {
       \texttt{run\_simulation.py}
     };
     
-    \node[tool] (prosimos-asis) at (3, 3.5) {Prosimos\\(Short-Term)};
+    \node[tool] (prosimos-asis) at (-2, 2.5) {Prosimos\\(Short-Term)};
     
-    \node[output] (out-asis) at (3, 1) {Results\\\texttt{punto-corte-X/}};
-    \node[font=\tiny] at (3, 0.5) {\texttt{data/generado-short-term/}};
+    \node[output] (out-asis) at (-2, 0) {Results\\\texttt{punto-corte-X/}};
+    \node[font=\tiny] at (-2, -0.5) {\texttt{data/generado-short-term/}};
+
+    % Caja contenedora (Folder)
+    \node[draw=gray!80, rounded corners, inner sep=0.4cm, fit=(sim-asis) (prosimos-asis) (out-asis)] (sim-asis-box) {};
     
     % Inputs for Phase 2B
-    \draw[arrow, green!70, thick] (states.east) -- ++(1.5,0) |- (3, 7.5) -- (sim-asis.north);
+    \draw[arrow, black!70, thick] (states.east) -- ++(1.8,0) |- (-2, 7.5) -- (sim-asis.north);
     %\draw[arrow, blue!80] (bpmn-asis.south) -- ++(0,-0.5) -| (sim-asis.south); % Long arrow around
     %\draw[arrow, purple!80] (json-asis.south) -- ++(0,-0.3) -| (sim-asis.south);
     % Conexión desde la derecha (.east) de la caja hacia compute
-    \draw[arrow] (simod-box.east) -| (-9,0) -- ++(10,0) |- (sim-asis.west);
+    \draw[arrow] (simod-box.east) -| (-12.7,-2.7) -- ++(8,0) |- (sim-asis.west);
     
     \draw[internal] (sim-asis.south) -- (prosimos-asis.north);
     \draw[arrow, green!70] (prosimos-asis.south) -- (out-asis.north);
     
     % ========== PHASE 2C: WHAT-IF (TO-BE) ==========
     
-    \node[script, fill=purple!25] (whatif) at (12, 6) {
+    \node[script, fill=purple!25] (whatif) at (11, 6) {
       \texttt{run\_whatif\_\\declarative.py}
     };
     
-    \node[input] (rules) at (17, 6) {Rules\\\texttt{rules.ini}};
+    \node[input] (rules) at (15, 6) {Rules\\\texttt{rules.ini}};
     
-    % Internal Steps What-If
-    \node[procstep, fill=purple!10] (gen-traces) at (9, 4) {1. Deep Learn\\Synt. Traces};
-    \node[procstep, fill=orange!10] (simod-tobe) at (12, 4) {2. Simod\\(TO-BE)};
-    \node[procstep, fill=purple!10] (map-state) at (15, 4) {3. Map State\\AS-IS $\to$ TO-BE};
+    % --- Training Component (Origin of .h5) ---
+    \node[config] (train-config) at (3.5, 9) {Params\\(Bayes Opt)};
     
-    \node[tool] (prosimos-tobe) at (12, 2.5) {Prosimos\\(Short-Term)};
+    % Internal steps of Training
+    \node[procstep, fill=purple!10, font=\tiny] (vec) at (3.5, 7.0) {1. Vectorize\\Log};
+    \node[procstep, fill=purple!10, font=\tiny] (train) at (3.5, 5.5) {2. LSTM Train\\(Optim Loop)};
+    \node[procstep, fill=purple!10, font=\tiny] (select) at (3.5, 4.0) {3. Select\\Best Model};
     
-    \node[output] (out-tobe) at (12, 1) {Results\\\texttt{whatif-X/cut-Y/}};
-    \node[font=\tiny] at (12, 0.5) {\texttt{data/generado-whatif/}};
+    % Container box for dg_training.py
+    \node[draw=purple!60, rounded corners, inner sep=0.2cm, fit=(vec) (train) (select)] (train-box) {};
+    \node[above, font=\tiny\bfseries, purple!80] at (train-box.north) {\texttt{dg\_training.py}};
+    
+    \node[input] (modelh5) at (7.5, 6) {Model\\\texttt{*.h5}};
+    
+    % Internal Training Flow
+    \draw[internal] (vec.south) -- (train.north);
+    \draw[internal] (train.south) -- (select.north);
+    
+    % External Inputs
+    \draw[arrow, purple!50] (train-config.south) -- (train-box.north);
+    
+    % From Log (far left) to Vectorization
+    % Route high to avoid overlap
+    \draw[arrow, blue!50, dashed] (log.north) -- ++(-0, 2) -| node[pos=0.25, above, font=\tiny, text=gray] {Training Data} (vec.west);
+    
+    % From Selection to Final Model Output
+    \draw[arrow, purple!70] (select.east) -- ++(0.5,0) |- (modelh5.west);
+    
+    % Internal Steps What-If - Detailed Breakdown
+    
+    % Row 1: Model Construction Stream
+    \node[procstep, fill=purple!10, font=\tiny] (gen-traces) at (7.5, 4.4) {1. Gen Traces\\(LSTM+Rules)};
+    \node[procstep, fill=orange!10, font=\tiny] (simod-tobe) at (12, 4.4) {2. Discover\\TO-BE Struct};
+    \node[procstep, fill=purple!10, font=\tiny] (merge-res) at (16.5, 4.4) {3. Merge Res\\(Keep AS-IS Distr)};
+    
+    % Row 2: State Preparation Stream
+    \node[procstep, fill=purple!10, font=\tiny] (map-state) at (7.5, 3.0) {4. Map IDs\\(Name-Based)};
+    \node[procstep, fill=purple!10, font=\tiny] (filter-state) at (11, 3.0) {5. Filter\\Ongoing Only};
+    \node[procstep, fill=purple!10, font=\tiny] (cut-point) at (14.5, 3.0) {6. Extract $t_0$\\from State};
+    
+    \node[tool] (prosimos-tobe) at (11, 1.2) {Prosimos\\(Short-Term)};
+    
+    \node[output] (out-tobe) at (11, -1) {Results\\\texttt{whatif/cut/}};
+    \node[font=\tiny] at (13, -0.4) {\texttt{data/generado-whatif/}};
+
+    % Caja contenedora (Folder)
+    \node[draw=gray!80, rounded corners, inner sep=0.2cm, fit=(whatif) (rules) (modelh5) (gen-traces) (simod-tobe) (merge-res) (map-state) (filter-state) (cut-point) (prosimos-tobe) (out-tobe)] (whatif-box) {};
     
     % Inputs for Phase 2C
     \draw[arrow, purple!70] (rules.west) -- (whatif.east);
-    \draw[arrow, green!70, thick] (states.east) -- ++(1.5,0) |- (10, 7.5) -| (whatif.north); % State input
-    \draw[arrow, blue!80] (bpmn-asis.south) -- ++(0,-1) -| (17, 4) -- (map-state.east); % AS-IS for mapping
+    \draw[arrow, blue!70] (modelh5.east) -- (whatif.west);
     
-    % Internal Flow What-If
+    % Data flow: Model Stream (With Artifact Labels)
     \draw[internal] (whatif.south) -- (gen-traces.north);
-    \draw[internal] (whatif.south) -- (simod-tobe.north);
-    \draw[internal] (whatif.south) -- (map-state.north);
+    \draw[internal] (gen-traces.east) -- node[above, font=\tiny] {Synt Log} (simod-tobe.west);
+    \draw[internal] (simod-tobe.east) -- node[above, font=\tiny] {TO-BE BPMN} (merge-res.west);
     
-    \draw[internal] (gen-traces.south) |- (prosimos-tobe.west); % Traces -> Model -> Sim
-    \draw[internal] (simod-tobe.south) -- (prosimos-tobe.north); % TO-BE Model
-    \draw[internal] (map-state.south) |- (prosimos-tobe.east); % Mapped State
+    % Data flow: State Stream
+    % State input enters Map State
+    \draw[arrow, black!70, thick] (states.east) -- ++(1.8,0) |- (1, 7.5) |- (map-state.west);
+    
+    % TO-BE Model is needed for Mapping (Cross-stream dependency)
+    \draw[internal, dashed] (simod-tobe.south west) -- node[sloped, above, font=\tiny] {Target IDs} (map-state.north east);
+    
+    % State Processing Flow
+    \draw[internal] (map-state.east) -- node[above, font=\tiny] {Mapped} (filter-state.west);
+    \draw[internal] (filter-state.east) -- node[above, font=\tiny] {Clean} (cut-point.west);
+    
+    % AS-IS Model Inputs (from left) to Merge & Map
+    % Route from Simod Box to Merge Res (AS-IS JSON)
+    \draw[arrow, black!80] (simod-box.east) -- ++(1.3,0) -- ++(0,-2.5) -- ++(31.5,0) |- (merge-res.east);
+    % Route from Simod Box to Map State (AS-IS BPMN for name resolution)
+    \draw[arrow, black!80] (simod-box.east) -- ++(1.3,0) -- ++(0,-2.5) -- ++(20.2,0) -- (map-state.south);
+
+    % Final simulation connections
+    \draw[internal] (merge-res.south) |- (prosimos-tobe.east); % Model Params
+    \draw[internal] (filter-state.south) -- (prosimos-tobe.north); % Process State
+    \draw[internal] (cut-point.south) |- (prosimos-tobe.east); % Start Time
     
     \draw[arrow, green!70] (prosimos-tobe.south) -- (out-tobe.north);
     
     % ========== LEGEND ==========
-    \node[anchor=north west, font=\tiny] at (-17, 0) {
+    \node[anchor=north west, font=\tiny] at (-19, -2) {
       \begin{tabular}{@{}l@{}}
         \textcolor{blue!70}{$\rightarrow$} Input Data\\
         \textcolor{green!70}{$\rightarrow$} State/Results\\
@@ -163,6 +227,6 @@ This diagram illustrates the complete architecture of the \texttt{nuevo} pipelin
     };
     
   \end{tikzpicture}
-  \caption{Updated Architecture. \textbf{Phase 1}: AS-IS Model Discovery. \textbf{Phase 2A}: Partial State Computation (supports multiple cut-off strategies). \textbf{Phase 2B}: Baseline Short-Term Simulation using AS-IS model and partial state. \textbf{Phase 2C}: Declarative What-If Analysis. This phase (1) generates synthetic traces complying with declarative rules, (2) discovers a TO-BE BPMN model, (3) \textbf{maps the AS-IS partial state to the TO-BE model} (resolving ID mismatches), and (4) executes short-term simulation from the mapped state for ongoing cases.}
+  \caption{Updated Architecture. \textbf{Training}: The \texttt{dg\_training.py} script (1) vectorizes the event log, (2) trains multiple LSTM variants using Bayesian optimization, and (3) selects the best performing model (.h5). \textbf{Phase 1}: AS-IS Model Discovery. \textbf{Phase 2A}: Partial State Computation. \textbf{Phase 2B}: Baseline Short-Term Simulation. \textbf{Phase 2C}: Declarative What-If Analysis. Uses the trained model and declarative rules to (1) generate synthetic traces, (2) discover TO-BE structure, (3) merge resources, and (4) \textbf{map the AS-IS partial state to the TO-BE model} for simulation starting strictly from the cut-point.}
   \label{fig:architecture}
 \end{figure}
