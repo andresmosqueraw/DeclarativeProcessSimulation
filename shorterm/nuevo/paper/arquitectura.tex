@@ -172,17 +172,33 @@ This diagram illustrates the complete architecture of the \texttt{nuevo} pipelin
     \node[procstep, fill=purple!10, font=\tiny] (merge-res) at (16.5, 4.4) {3. Merge Res\\(Keep AS-IS Distr)};
     
     % Row 2: State Preparation Stream
-    \node[procstep, fill=purple!10, font=\tiny] (map-state) at (7.5, 3.0) {4. Map IDs\\(Name-Based)};
-    \node[procstep, fill=purple!10, font=\tiny] (filter-state) at (11, 3.0) {5. Filter\\Ongoing Only};
-    \node[procstep, fill=purple!10, font=\tiny] (cut-point) at (14.5, 3.0) {6. Extract $t_0$\\from State};
+    \node[procstep, fill=purple!10, font=\tiny] (map-state) at (7.5, 2.5) {4. Map IDs\\(Name-Based)};
+    \node[procstep, fill=purple!10, font=\tiny] (filter-state) at (12, 2.5) {5. Filter Ongoing\\(NO New Cases)};
+    \node[procstep, fill=purple!10, font=\tiny] (cut-point) at (16, 2.5) {6. Start @ $t_0$\\(Forward Only)};
     
-    \node[tool] (prosimos-tobe) at (11, 1.2) {Prosimos\\(Short-Term)};
+    % Note on Mapping logic
+    \node[above=0.1cm of map-state, font=\tiny, gray] {Matches by Activity Name};
+
+    \node[tool] (prosimos-tobe) at (11, 1.2) {Prosimos\\(State-Aware)\\(Short-Term)};
     
-    \node[output] (out-tobe) at (11, -1) {Results\\\texttt{whatif/cut/}};
-    \node[font=\tiny] at (13, -0.4) {\texttt{data/generado-whatif/}};
+    % Explicit Explanation Node
+    \node[rectangle, draw=red!40, fill=red!5, align=left, font=\tiny, inner sep=0.1cm] (constraints) at (15.5, 0) {
+      \textbf{WHY Prosimos Short-Term?}\\
+      Only engine that accepts\\
+      \textbf{MANDATORY Partial State}.\\
+      \rule{2.5cm}{0.4pt}\\
+      \textbf{CRITICAL RULES:}\\
+      1. Simulates \textit{Future} ($t > t_0$)\\
+      2. Only Ongoing (Closed)
+    };
+    
+    \draw[dashed, red!40] (constraints.west) -- (prosimos-tobe.east);
+    
+    \node[output] (out-tobe) at (11, -1) {Output\\\texttt{Sim Log}\\\texttt{KPI Stats}};
+    \node[font=\tiny] (out-folder) at (11, -1.8) {\texttt{data/generado-whatif/}};
 
     % Caja contenedora (Folder)
-    \node[draw=gray!80, rounded corners, inner sep=0.2cm, fit=(whatif) (rules) (modelh5) (gen-traces) (simod-tobe) (merge-res) (map-state) (filter-state) (cut-point) (prosimos-tobe) (out-tobe)] (whatif-box) {};
+    \node[draw=gray!80, rounded corners, inner sep=0.2cm, fit=(whatif) (rules) (modelh5) (gen-traces) (simod-tobe) (merge-res) (map-state) (filter-state) (cut-point) (prosimos-tobe) (out-tobe) (constraints) (out-folder)] (whatif-box) {};
     
     % Inputs for Phase 2C
     \draw[arrow, purple!70] (rules.west) -- (whatif.east);
@@ -195,14 +211,14 @@ This diagram illustrates the complete architecture of the \texttt{nuevo} pipelin
     
     % Data flow: State Stream
     % State input enters Map State
-    \draw[arrow, black!70, thick] (states.east) -- ++(1.8,0) |- (1, 7.5) |- (map-state.west);
+    \draw[arrow, black!70, thick] (states.east) -- ++(1.8,0) |- (1, 7.5) |- node[pos=0.9, above, font=\tiny, sloped] {Input State (AS-IS)} (map-state.west);
     
     % TO-BE Model is needed for Mapping (Cross-stream dependency)
     \draw[internal, dashed] (simod-tobe.south west) -- node[sloped, above, font=\tiny] {Target IDs} (map-state.north east);
     
     % State Processing Flow
-    \draw[internal] (map-state.east) -- node[above, font=\tiny] {Mapped} (filter-state.west);
-    \draw[internal] (filter-state.east) -- node[above, font=\tiny] {Clean} (cut-point.west);
+    \draw[internal] (map-state.east) -- node[above, font=\tiny] {Mapped State} (filter-state.west);
+    \draw[internal] (filter-state.east) -- node[above, font=\tiny] {Filtered} (cut-point.west);
     
     % AS-IS Model Inputs (from left) to Merge & Map
     % Route from Simod Box to Merge Res (AS-IS JSON)
@@ -211,8 +227,8 @@ This diagram illustrates the complete architecture of the \texttt{nuevo} pipelin
     \draw[arrow, black!80] (simod-box.east) -- ++(1.3,0) -- ++(0,-2.5) -- ++(20.2,0) -- (map-state.south);
 
     % Final simulation connections
-    \draw[internal] (merge-res.south) |- (prosimos-tobe.east); % Model Params
-    \draw[internal] (filter-state.south) -- (prosimos-tobe.north); % Process State
+    \draw[internal] (merge-res.south) |- (17.7, 3.4) |- (prosimos-tobe.east); % Model Params
+    \draw[internal] (filter-state.south) -- node[right, font=\tiny] {Final State} (prosimos-tobe.north); % Process State
     \draw[internal] (cut-point.south) |- (prosimos-tobe.east); % Start Time
     
     \draw[arrow, green!70] (prosimos-tobe.south) -- (out-tobe.north);
@@ -230,3 +246,10 @@ This diagram illustrates the complete architecture of the \texttt{nuevo} pipelin
   \caption{Updated Architecture. \textbf{Training}: The \texttt{dg\_training.py} script (1) vectorizes the event log, (2) trains multiple LSTM variants using Bayesian optimization, and (3) selects the best performing model (.h5). \textbf{Phase 1}: AS-IS Model Discovery. \textbf{Phase 2A}: Partial State Computation. \textbf{Phase 2B}: Baseline Short-Term Simulation. \textbf{Phase 2C}: Declarative What-If Analysis. Uses the trained model and declarative rules to (1) generate synthetic traces, (2) discover TO-BE structure, (3) merge resources, and (4) \textbf{map the AS-IS partial state to the TO-BE model} for simulation starting strictly from the cut-point.}
   \label{fig:architecture}
 \end{figure}
+
+
+
+
+
+
+\end{document}
