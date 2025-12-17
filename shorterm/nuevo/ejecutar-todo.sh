@@ -115,12 +115,12 @@ if [ "$WHATIF_ENABLED" = "true" ]; then
     echo "✅ What-If declarativo está habilitado en config.yaml"
     echo ""
     
-    if [ -f "$SRC_DIR/run_whatif_declarative.py" ]; then
-        python "$SRC_DIR/run_whatif_declarative.py" || {
+    if [ -f "$SRC_DIR/run_whatif_short_term_simulation.py" ]; then
+        python "$SRC_DIR/run_whatif_short_term_simulation.py" || {
             echo "⚠️  What-If declarativo falló, pero el pipeline continúa"
         }
     else
-        echo "⚠️  No se encontró: $SRC_DIR/run_whatif_declarative.py"
+        echo "⚠️  No se encontró: $SRC_DIR/run_whatif_short_term_simulation.py"
         echo "   Saltando paso de What-If"
     fi
 else
