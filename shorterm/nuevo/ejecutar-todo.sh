@@ -1,5 +1,8 @@
 #!/bin/bash
-# Script para ejecutar todo el pipeline: extract_bpmn_json.py y run_ongoing_state.py
+# Script para ejecutar todo el pipeline:
+#   1) extract_bpmn_json.py
+#   2) compute_state.py
+#   3) train_agent_in_gym.py
 
 SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 VENV_DIR="$SCRIPT_DIR/venv"
@@ -71,16 +74,16 @@ echo "✅ PASO 2 COMPLETADO"
 echo "=================================================================================="
 echo ""
 
-# Paso 3: Ejecutar run_simulation.py (si está habilitado)
+# Paso 3: Ejecutar train_agent_in_gym.py
 echo "=================================================================================="
-echo "📋 PASO 3: Ejecutando simulación de corto plazo (si está habilitada)"
+echo "📋 PASO 3: Entrenando agente (Causal-Gym / Neuro-Simbólico)"
 echo "=================================================================================="
 echo ""
 
-if [ -f "$SRC_DIR/run_simulation.py" ]; then
-    python "$SRC_DIR/run_simulation.py" || handle_error "run_simulation.py"
+if [ -f "$SRC_DIR/train_agent_in_gym.py" ]; then
+    python "$SRC_DIR/train_agent_in_gym.py" || handle_error "train_agent_in_gym.py"
 else
-    echo "❌ No se encontró: $SRC_DIR/run_simulation.py"
+    echo "❌ No se encontró: $SRC_DIR/train_agent_in_gym.py"
     deactivate
     exit 1
 fi
@@ -88,49 +91,6 @@ fi
 echo ""
 echo "=================================================================================="
 echo "✅ PASO 3 COMPLETADO"
-echo "=================================================================================="
-echo ""
-
-# Paso 4: Ejecutar what-if declarativo (si está habilitado)
-echo "=================================================================================="
-echo "📋 PASO 4: Análisis What-If con reglas declarativas (opcional)"
-echo "=================================================================================="
-echo ""
-
-# Verificar si what-if está habilitado en config.yaml
-WHATIF_ENABLED=$(python3 -c "
-import yaml
-import sys
-try:
-    with open('config.yaml', 'r') as f:
-        config = yaml.safe_load(f)
-    whatif_config = config.get('whatif_config', {})
-    enabled = whatif_config.get('enabled', False)
-    print('true' if enabled else 'false')
-except:
-    print('false')
-" 2>/dev/null)
-
-if [ "$WHATIF_ENABLED" = "true" ]; then
-    echo "✅ What-If declarativo está habilitado en config.yaml"
-    echo ""
-    
-    if [ -f "$SRC_DIR/run_whatif_short_term_simulation.py" ]; then
-        python "$SRC_DIR/run_whatif_short_term_simulation.py" || {
-            echo "⚠️  What-If declarativo falló, pero el pipeline continúa"
-        }
-    else
-        echo "⚠️  No se encontró: $SRC_DIR/run_whatif_short_term_simulation.py"
-        echo "   Saltando paso de What-If"
-    fi
-else
-    echo "ℹ️  What-If declarativo está deshabilitado (whatif_config.enabled: false)"
-    echo "   Para habilitarlo, edita config.yaml y establece whatif_config.enabled: true"
-fi
-
-echo ""
-echo "=================================================================================="
-echo "✅ PASO 4 COMPLETADO"
 echo "=================================================================================="
 echo ""
 
@@ -143,7 +103,8 @@ echo ""
 echo "📁 Archivos generados:"
 echo "   • BPMN y JSON: data/generado-simod/"
 echo "   • Estado parcial: data/generado-state/"
-echo "   • Simulación: data/generado-short-term-simulation/"
-if [ "$WHATIF_ENABLED" = "true" ]; then
-    echo "   • What-If declarativo: data/generado-whatif-declarative/"
+if [ -f "data/generado-rl-train/experience_buffer.csv" ]; then
+    echo "   • Experience buffer (RL): data/generado-rl-train/experience_buffer.csv"
+else
+    echo "   • Experience buffer (RL): (no generado)"
 fi
