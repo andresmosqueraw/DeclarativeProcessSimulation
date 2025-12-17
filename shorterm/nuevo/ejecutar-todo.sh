@@ -3,6 +3,7 @@
 #   1) extract_bpmn_json.py
 #   2) compute_state.py
 #   3) train_agent_in_gym.py
+#   4) distill_policy.py
 
 SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 VENV_DIR="$SCRIPT_DIR/venv"
@@ -94,6 +95,26 @@ echo "✅ PASO 3 COMPLETADO"
 echo "=================================================================================="
 echo ""
 
+# Paso 4: Ejecutar distill_policy.py
+echo "=================================================================================="
+echo "📋 PASO 4: Destilando política (Policy Distillation / Imitation Learning)"
+echo "=================================================================================="
+echo ""
+
+if [ -f "$SRC_DIR/distill_policy.py" ]; then
+    python "$SRC_DIR/distill_policy.py" || handle_error "distill_policy.py"
+else
+    echo "❌ No se encontró: $SRC_DIR/distill_policy.py"
+    deactivate
+    exit 1
+fi
+
+echo ""
+echo "=================================================================================="
+echo "✅ PASO 4 COMPLETADO"
+echo "=================================================================================="
+echo ""
+
 # Desactivar entorno virtual
 deactivate
 
@@ -107,4 +128,9 @@ if [ -f "data/generado-rl-train/experience_buffer.csv" ]; then
     echo "   • Experience buffer (RL): data/generado-rl-train/experience_buffer.csv"
 else
     echo "   • Experience buffer (RL): (no generado)"
+fi
+if [ -f "data/final_policy_model.pkl" ]; then
+    echo "   • Modelo de política destilada: data/final_policy_model.pkl"
+else
+    echo "   • Modelo de política destilada: (no generado)"
 fi
